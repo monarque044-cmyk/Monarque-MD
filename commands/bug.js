@@ -16,7 +16,7 @@ async function bug(message, client, texts, num) {
 
                         title: "Join Our WhatsApp Channel",
 
-                        body: " Digix Crew ",
+                        body: " 𝑍ᴇʀ⭕✞︎DIAS ",
 
                         mediaType: 1, // Image preview
 
