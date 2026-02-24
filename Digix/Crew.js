@@ -74,16 +74,16 @@ async function connectToWhatsapp(handleMessage) {
 ╔══════════════════╗
       *Monarque Bot Connected Successfully* 🚀
 ╠══════════════════╣
-> "Always Forward. Digital Crew, one of the best."
+> "Always Forward. Monarque MD, one of the best."
 ╚══════════════════╝
 
-*Digital Crew 243*
+*Monarque MD*
                 `;
 
                 await sock.sendMessage(chatId, {
                     image: { url: imagePath },
                     caption: messageText,
-                    footer: '💻 Powered by DigiX Crew',
+                    footer: '💻 Powered by Monarque MD',
                 });
 
                 console.log('📩 Welcome message sent successfully!');
