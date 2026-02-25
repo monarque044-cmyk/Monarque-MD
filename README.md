@@ -2,7 +2,7 @@
 
 ---
 
-## 📌 About KAYA-MD
+## 📌 About MONARQUE-MD
 
 > **MONARQUE-MD** is a powerful WhatsApp Multi-Device bot built with **Node.js and Baileys**.
 
