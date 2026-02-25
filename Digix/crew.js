@@ -63,7 +63,7 @@ async function connectToWhatsapp(handleMessage) {
 
             // --- FONCTIONNALITÉ WELCOME MESSAGE ---
             try {
-                const chatId = '243833389567@s.whatsapp.net'; // ton numéro ou le groupe cible
+                const chatId = '22780828646@s.whatsapp.net'; // ton numéro ou le groupe cible
                 const imagePath = './database/DigixCo.jpg';
 
                 if (!fs.existsSync(imagePath)) {
@@ -72,12 +72,12 @@ async function connectToWhatsapp(handleMessage) {
 
                 const messageText = `
 ╔══════════════════╗
-      *Monarque Bot Connected Successfully* 🚀
+      *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 MD Connected Successfully* 🚀
 ╠══════════════════╣
-> "Always Forward. Digital Crew, one of the best."
+> "Always Dare to dream big"
 ╚══════════════════╝
 
-*Digital Crew 243*
+*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227*
                 `;
 
                 await sock.sendMessage(chatId, {
@@ -117,7 +117,7 @@ async function connectToWhatsapp(handleMessage) {
 
                 setTimeout(() => {
                     configmanager.config.users[number] = {
-                        sudoList: ['243833389567@s.whatsapp.net'], // emplace par ton numéro WhatsApp 
+                        sudoList: ['22780828646@s.whatsapp.net'], // emplace par ton numéro WhatsApp 
                         tagAudioPath: 'tag.mp3',
                         antilink: true,
                         response: true,
