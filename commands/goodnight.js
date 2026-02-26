@@ -1,5 +1,5 @@
 // Fonction pour styliser le message (placée à l'extérieur)
-function beautifyGoodnight(text) {
+export default async function beautifyGoodnight(text) {
     const emojis = ['🌙', '💤', '🌃', '✨', '🌟', '🛌', '😴', '🌌', '🌠'];
     const selected = emojis.sort(() => 0.5 - Math.random()).slice(0, 3);
     const lineEmoji = selected.join(' ');
