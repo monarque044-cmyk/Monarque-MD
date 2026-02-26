@@ -1,4 +1,4 @@
-import connectToWhatsapp from './Monarque/MD.js'
+import connectToWhatsapp from './Monarque/crew.js'
 import handleIncomingMessage from './events/messageHandler.js'
 
 (async() => {
