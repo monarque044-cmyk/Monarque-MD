@@ -31,7 +31,6 @@ import uptime from '../commands/uptime.js'
 import compliment from '../commands/compliment.js'
 import weather from '../commands/weather.js'
 import goodnight from '../commands/goodnight.js'
-import axios from 'axios'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
