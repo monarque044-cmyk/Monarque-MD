@@ -28,7 +28,8 @@ import info from "../commands/menu.js"
 import { pingTest } from "../commands/ping.js"
 import auto from '../commands/auto.js'
 import uptime from '../commands/uptime.js'
-
+import compliment from '../commands/compliment.js
+    
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
     const number = client.user.id.split(':')[0]
@@ -73,6 +74,11 @@ async function handleIncomingMessage(client, event) {
                     await uptime(client, message)
                     break
 
+                case 'compliment': // @cat: fun
+                    await react(client, message)
+                    await compliment(client, message)
+                    break
+                    
                 case 'ping': // @cat: utils
                     await react(client, message)
                     await pingTest(client, message)
