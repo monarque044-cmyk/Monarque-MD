@@ -1,6 +1,6 @@
 import { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } from 'baileys';
 import readline from 'readline';
-import deployAsPremium from '../utils/DigixV.js';
+import deployAsPremium from '../utils/MomoX.js';
 import configmanager from '../utils/configmanager.js';
 import pino from 'pino';
 import fs from 'fs';
