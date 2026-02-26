@@ -1,4 +1,4 @@
-import { DigixNew } from '../utils/Momokex.js';
+import { DigixNew } from '../utils/MomoKex.js';
 import { downloadMediaMessage } from 'baileys';
 import fs from 'fs';
 import path from 'path';
