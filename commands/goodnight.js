@@ -1,5 +1,5 @@
-// Fonction pour styliser le message (placée à l'extérieur)
-export default async function beautifyGoodnight(text) {
+// 🔹 Fonction utilitaire interne
+function beautifyGoodnight(text) {
     const emojis = ['🌙', '💤', '🌃', '✨', '🌟', '🛌', '😴', '🌌', '🌠'];
     const selected = emojis.sort(() => 0.5 - Math.random()).slice(0, 3);
     const lineEmoji = selected.join(' ');
@@ -10,40 +10,47 @@ export default async function beautifyGoodnight(text) {
            `${lineEmoji} Et que demain soit encore meilleur.`;
 }
 
-// L'exportation doit être la fonction elle-même
+// 🔹 L'exportation pour ton switch case
 export default async function goodnight(client, message) {
-    const chatId = message.chat;
-    const m = message; // Alias pour simplifier la lecture
-    const args = m.body ? m.body.split(' ').slice(1) : [];
-
-    let targetUser;
-
-    // 🔹 Détection de la cible (mention ou réponse)
-    const ctx = m.message?.extendedTextMessage?.contextInfo;
-    if (ctx?.mentionedJid?.length) {
-        targetUser = ctx.mentionedJid[0];
-    } else if (ctx?.participant) {
-        targetUser = ctx.participant;
-    } else {
-        targetUser = m.sender;
-    }
-
     try {
-        // 🔹 Déterminer le message
-        let customText = args.join(' ');
-        const messageFinal = customText || 'Passe une excellente nuit !';
+        // 1. Déterminer l'ID du chat (remoteJid)
+        const chatId = message.chat || message.key?.remoteJid;
+        
+        if (!chatId) {
+            console.error("❌ Impossible de trouver l'ID du chat.");
+            return;
+        }
 
-        // 🔹 Embellissement
+        // 2. Extraire le texte du message pour les arguments
+        const msgText = message.body || 
+                        message.message?.conversation || 
+                        message.message?.extendedTextMessage?.text || 
+                        "";
+        
+        const args = msgText.split(' ').slice(1);
+
+        // 3. Déterminer la cible (mention, réponse ou expéditeur)
+        const contextInfo = message.message?.extendedTextMessage?.contextInfo;
+        let targetUser = message.sender || message.key?.participant || message.key?.remoteJid;
+
+        if (contextInfo?.mentionedJid?.length > 0) {
+            targetUser = contextInfo.mentionedJid[0];
+        } else if (contextInfo?.participant) {
+            targetUser = contextInfo.participant;
+        }
+
+        // 4. Préparer le message final
+        const customText = args.join(' ');
+        const messageFinal = customText || 'Passe une excellente nuit !';
         const beautified = beautifyGoodnight(messageFinal);
 
-        // 🔹 Envoi
+        // 5. Envoi
         await client.sendMessage(chatId, {
             text: `💤 *Bonne nuit* @${targetUser.split('@')[0]} 🌙\n\n${beautified}`,
-            mentions: [targetUser],
-        }, { quoted: m });
+            mentions: [targetUser]
+        }, { quoted: message });
 
     } catch (error) {
-        console.error('❌ Erreur commande Goodnight :', error);
-        await client.sendMessage(chatId, { text: '❌ Erreur lors de l\'envoi.' }, { quoted: m });
+        console.error('❌ Erreur critique commande Goodnight :', error);
     }
 }
