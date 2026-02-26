@@ -1,76 +1,62 @@
-export default async function goodnight(client, message) {
-  name: 'goodnight',
-  alias: ['gn', 'lovenight', 'bonne nuit'],
-  category: 'Fun',
-  description: '💤 Envoie un message mignon de bonne nuit à quelqu’un',
-  usage: '.goodnight @user ou .goodnight <texte>',
+export default {
+    name: 'goodnight',
+    alias: ['gn', 'lovenight', 'bonne nuit'],
+    category: 'Fun',
+    description: '💤 Envoie un message mignon de bonne nuit à quelqu’un',
+    usage: '.goodnight @user ou .goodnight <texte>',
 
-  run: async (sock, m, args) => {
-    const chatId = m.chat;
-    let targetUser;
+    async execute(monarque, m, args) {
+        const chatId = m.chat;
+        let targetUser;
 
-    // 🔹 Priorité : mention ou reply
-    const ctx = m.message?.extendedTextMessage?.contextInfo;
-    if (ctx?.mentionedJid?.length) {
-      targetUser = ctx.mentionedJid[0];
-    } else if (ctx?.participant) {
-      targetUser = ctx.participant;
-    } 
-    // 🔹 Sinon, si un texte ou numéro est passé en argument
-    else if (args[0]) {
-      const num = args[0].replace(/\D/g, '');
-      targetUser = `${num}@s.whatsapp.net`;
-    } 
-    // 🔹 Par défaut, envoyer au sender lui-même
-    else {
-      targetUser = m.sender;
+        // 🔹 Gestion de la cible (mention, réponse ou soi-même)
+        const ctx = m.message?.extendedTextMessage?.contextInfo;
+        if (ctx?.mentionedJid?.length) {
+            targetUser = ctx.mentionedJid[0];
+        } else if (ctx?.participant) {
+            targetUser = ctx.participant;
+        } else {
+            targetUser = m.sender;
+        }
+
+        try {
+            // 🔹 Déterminer le message
+            let customText = args.join(' ');
+            if (ctx?.mentionedJid?.length) {
+                // Si on mentionne quelqu'un, on enlève la mention du texte
+                customText = args.slice(1).join(' ');
+            }
+            
+            const messageFinal = customText || 'Passe une excellente nuit !';
+
+            // 🔹 Embellissement du message
+            const beautified = beautifyGoodnight(messageFinal);
+
+            // 🔹 Envoi du message
+            await monarque.sendMessage(chatId, {
+                text: `💤 *Bonne nuit* @${targetUser.split('@')[0]} 🌙\n\n${beautified}`,
+                mentions: [targetUser],
+            }, { quoted: m });
+
+        } catch (error) {
+            console.error('❌ Erreur commande Goodnight :', error);
+            await monarque.sendMessage(chatId, {
+                text: '❌ Impossible d’envoyer le message de bonne nuit.',
+            }, { quoted: m });
+        }
     }
-
-    try {
-      let goodnightMessage = '';
-
-      // 🔹 Si l’utilisateur a fourni un texte
-      if (args.length) {
-        goodnightMessage = args.join(' ');
-      } 
-      // 🔹 Sinon, message par défaut
-      else {
-        goodnightMessage = 'Bonne nuit !';
-      }
-
-      // 🔹 Beautify avec plusieurs têtes / emojis
-      goodnightMessage = beautifyGoodnight(goodnightMessage);
-
-      // 🔹 Envoi du message
-      await sock.sendMessage(chatId, {
-        text: `💤 Bonne nuit @${targetUser.split('@')[0]} 🌙\n\n${goodnightMessage}`,
-        mentions: [targetUser],
-        quoted: m
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur commande Goodnight :', error);
-      await sock.sendMessage(chatId, {
-        text: '❌ Impossible d’envoyer le message de bonne nuit. Réessayez plus tard !',
-        quoted: m
-      });
-    }
-  }
 };
 
-// 🔹 Fonction pour styliser le message avec plusieurs têtes
+// 🔹 Fonction pour styliser le message
 function beautifyGoodnight(text) {
-  const emojis = ['🌙', '💤', '🌃', '✨', '🌟', '🛌', '😴', '🌌', '🌠'];
-  // Choisir 3 emojis aléatoires
-  const selected = [];
-  while (selected.length < 3) {
-    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-    if (!selected.includes(emoji)) selected.push(emoji);
-  }
+    const emojis = ['🌙', '💤', '🌃', '✨', '🌟', '🛌', '😴', '🌌', '🌠'];
+    
+    // Mélanger et prendre 3 emojis
+    const selected = emojis.sort(() => 0.5 - Math.random()).slice(0, 3);
+    const lineEmoji = selected.join(' ');
 
-  return `✨ ${text}
-
-${selected.join(' ')} Que tes rêves soient doux,
-${selected.join(' ')} Que la nuit t’apporte la paix,
-${selected.join(' ')} Et que demain soit encore meilleur.`;
+    return `✨ ${text}\n\n` +
+           `${lineEmoji} Que tes rêves soient doux,\n` +
+           `${lineEmoji} Que la nuit t’apporte la paix,\n` +
+           `${lineEmoji} Et que demain soit encore meilleur.`;
 }
