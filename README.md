@@ -34,3 +34,9 @@ It is designed to be:
 
 <p align="center">
   <a href="https://dashboard.katabump.com/auth/login#483bf6" target="_blank">
+<button style="padding:14px 22px;font-size:16px;border:none;border-radius:10px;background:#007bff;color:white;cursor:pointer;font-weight:bold;">
+      🚀 Deploy on Katabump
+    </button>
+  </a>
+</p>
+
