@@ -1,4 +1,4 @@
-export default {
+export default async function goodnight(client, message) {
   name: 'goodnight',
   alias: ['gn', 'lovenight', 'bonne nuit'],
   category: 'Fun',
