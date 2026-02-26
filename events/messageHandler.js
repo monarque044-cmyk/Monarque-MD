@@ -30,6 +30,7 @@ import auto from '../commands/auto.js'
 import uptime from '../commands/uptime.js'
 import compliment from '../commands/compliment.js'
 import weather from '../commands/weather.js'
+import goodnight from '../commands/goodnight.js'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
@@ -80,6 +81,11 @@ async function handleIncomingMessage(client, event) {
                     await compliment(client, message)
                     break
 
+                case 'goodnight': //@cat: fun
+                    await react(client, message)
+                    await goodnight(client, message)
+                    break
+                    
                 case 'weather': //@cat: fun
                     await react(client, message)
                     await weather(client, message)
