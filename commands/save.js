@@ -1,5 +1,5 @@
 
-import { DigixNew } from '../utils/DigixNew.js';
+import { DigixNew } from '../utils/MomoKex.js';
 
 import { downloadMediaMessage } from 'baileys';
 
