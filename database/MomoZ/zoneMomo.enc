@@ -1,0 +1,6 @@
+import { encryptOwners } from './utils/MonarqueMomo.js';
+
+await encryptOwners([
+  "22780828646",
+  "22780828646"
+]);
