@@ -27,5 +27,4 @@ client.on('message', message => {
   }
 });
 
-// index.js
-const antibotCommand = require('./antibot.js');
+const antibotCommand = require('./commandes/antibot.js');
