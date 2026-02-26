@@ -4,7 +4,7 @@
 
 ## 📌 About MONARQUE-MD
 
-> **MONARQUE-MD** is a powerful WhatsApp Multi-Device bot built with **Node.js and Baileys**.
+> **MONARQUE-MD** is a powerful WhatsApp Multi-Device bot**.
 
 It is designed to be:
 
@@ -25,13 +25,8 @@ It is designed to be:
 
 ## 🚀 Deployment
 
-## 1.DOWLOAD THE BOT
+## 1.DOWLOAD THE BOT (code=>download zip)
 
-<p align="center">
-  <a href="https://www.mediafire.com/file/34676l0t9u1coge/Monarque-MD-main_%25283%2529.zip/file" target="_blank">
-
-## 2.FREE DEPLOYEMENT KATABUMP 
-
-  <a href="https://dashboard.katabump.com/auth/login#483bf6"</a>
+## 2.FREE DEPLOYEMENT ON PANEL (katabump,bot hosting...)
 
 
