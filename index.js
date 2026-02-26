@@ -9,11 +9,11 @@ import handleIncomingMessage from './events/messageHandler.js'
 const complimentCommand = require('./compliment.js');
 
 // index.js
-const helpCommand = require('./help.js');
+const helpCommand = require('.commands/help.js');
 
 // ...
 
-const commandes = [
+const command = [
   helpCommand,
   // ajoute d'autres commandes ici
 ];
@@ -27,4 +27,4 @@ client.on('message', message => {
   }
 });
 
-const antibotCommand = require('./commandes/antibot.js');
+const antibotCommand = require('./commands/antibot.js');
