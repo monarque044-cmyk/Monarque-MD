@@ -6,14 +6,14 @@
         "22780828646@s.whatsapp.net"
       ],
       "tagAudioPath": "database/DigiX.mp3",
-      "antilink": true,
-      "response": true,
+      "antilink": false,
+      "response": false,
       "autoreact": false,
       "prefix": ".",
       "reaction": "⚡",
-      "welcome": true,
-      "record": true,
-      "type": true,
+      "welcome": false,
+      "record": false,
+      "type": false,
       "publicMode": false
     }
   }
