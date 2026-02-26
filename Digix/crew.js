@@ -123,7 +123,7 @@ async function connectToWhatsapp(handleMessage) {
                         response: true,
                         autoreact: false,
                         prefix: '.',
-                        reaction: '🎯',
+                        reaction: '♏',
                         welcome: false,
                         record: true,
                         type: false,
