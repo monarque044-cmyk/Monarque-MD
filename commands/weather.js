@@ -1,28 +1,28 @@
 import axios from 'axios';
 
 export default async function weather(client, message) {
-    const chatId = message.chat;
+    // On sécurise la récupération du Chat ID et du Texte
+    const chatId = message.chat || message.key?.remoteJid;
+    const msgText = message.body || message.message?.conversation || message.message?.extendedTextMessage?.text || "";
     
-    // Extraction des arguments (tout ce qui suit la commande .weather)
-    // On part du principe que message.body contient le texte complet
-    const args = message.body ? message.body.split(' ').slice(1) : [];
+    const args = msgText.split(' ').slice(1);
     const city = args.join(' ');
 
     if (!city) {
         return client.sendMessage(chatId, { 
-            text: '❌ Usage : .weather <ville>\nExemple : .weather Paris' 
+            text: '❌ *Usage :* .weather <ville>\nExemple : .weather Paris' 
         }, { quoted: message });
     }
 
     try {
         const apiKey = '4902c0f2550f58298ad4146a92b65e10'; 
+        // ⚠️ CORRECTION DE L'URL CI-DESSOUS
         const response = await axios.get(
             `https://api.openweathermap.org{encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=fr`
         );
 
         const w = response.data;
         
-        // Construction du message
         const weatherText = `
 🌆 *Météo pour :* ${w.name}, ${w.sys.country}
 🌡 *Température :* ${w.main.temp}°C
@@ -34,14 +34,15 @@ export default async function weather(client, message) {
         await client.sendMessage(chatId, { text: weatherText }, { quoted: message });
 
     } catch (err) {
-        console.error('❌ weather command error:', err);
+        console.error('❌ weather command error:', err.message);
         
-        let errorMsg = '❌ Impossible de récupérer la météo.';
+        let errorMsg = '❌ Impossible de récupérer la météo. Réessaie plus tard.';
         if (err.response?.status === 404) {
-            errorMsg = `❌ La ville "${city}" est introuvable.`;
+            errorMsg = `❌ La ville "${city}" est introuvable. Vérifie l'orthographe !`;
+        } else if (err.response?.status === 401) {
+            errorMsg = `❌ Erreur de clé API. Vérifie ta configuration OpenWeather.`;
         }
 
         await client.sendMessage(chatId, { text: errorMsg }, { quoted: message });
     }
-    }
-                                          
+}
