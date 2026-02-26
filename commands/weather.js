@@ -1,7 +1,4 @@
-// ==================== commands/weather.js ====================
-import axios from 'axios';
-
-export default {
+export default async function weather(client, message) {
     name: 'meteo',
     alias: ['meteo', 'temp'],
     category: 'General',
