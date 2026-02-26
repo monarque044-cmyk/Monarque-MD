@@ -1,9 +1,5 @@
-// compliment.js
-module.exports = {
-  nom: '!compliment',
-  description: 'Recevoir un compliment',
-  execute: (message) => {
-    const compliments = [
+export defaul async fuction compliment(client, message) {
+    const replies = [
       'Tu es incroyable ! 😊',
       'Tu es super ! 👍',
       'Tu es vraiment génial ! 🎉',
@@ -38,8 +34,11 @@ module.exports = {
     'Ton rire est contagieux.😀',
     'Tu as un don naturel pour valoriser les autres.✨',
     'Tu rends le monde meilleur simplement en étant là.✨'
-];
-    const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
-    message.reply(randomCompliment);
-  }
-};
+]
+  
+    const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)]
+
+await client.sendMessage(message.key.remote, {
+  text: randomReply
+})
+}
