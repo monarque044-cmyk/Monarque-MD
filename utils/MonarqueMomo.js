@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 import fs from 'fs/promises';
 
-const FILE = 'database/digix2/shadow.enc';
-const SECRET = process.env.OWNER_KEY || 'Digix-crew';
+const FILE = 'database/MomoZ/zoneMomo.enc';
+const SECRET = process.env.OWNER_KEY || 'Monarque-MD';
 
 const ALGO = 'aes-256-cbc';
 
