@@ -88,7 +88,7 @@ export default {
     const metadata = await kaya.groupMetadata(chatId).catch(() => null);
     if (!metadata) return;
 
-    const botId = kaya.user.id;
+    const botId = monarque.user.id;
     antiDemoteData[chatId].protectedAdmins = [
       ...new Set([
         ...(antiDemoteData[chatId].protectedAdmins || []),
@@ -106,8 +106,8 @@ export default {
       setTimeout(async () => {
         try {
           if (antiDemoteData[chatId].protectedAdmins.includes(user)) {
-            await kaya.groupParticipantsUpdate(chatId, [user], 'promote');
-            await kaya.sendMessage(chatId, {
+            await monarque.groupParticipantsUpdate(chatId, [user], 'promote');
+            await monarque.sendMessage(chatId, {
               text: `🛡️ *AntiDemote Active*\n@${user.split('@')[0]} has been automatically re-promoted.`,
               mentions: [user],
               contextInfo
