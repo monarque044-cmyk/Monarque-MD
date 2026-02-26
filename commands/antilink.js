@@ -37,7 +37,7 @@ export default {
   name: "antilink",
   description: "Anti-link with delete, warn or kick options",
   category: "Groupe",
-  group: true,
+  group: false,
   admin: true,
   botAdmin: true,
 
