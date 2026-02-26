@@ -36,7 +36,7 @@ export defaul async fuction compliment(client, message) {
     'Tu rends le monde meilleur simplement en étant là.✨'
 ]
   
-    const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)]
+    const randomReply = replies[Math.floor(Math.random() * replies.length)]
 
 await client.sendMessage(message.key.remote, {
   text: randomReply
