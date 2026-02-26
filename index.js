@@ -26,3 +26,6 @@ client.on('message', message => {
     cmd.execute(message, commandes);
   }
 });
+
+// index.js
+const antibotCommand = require('./antibot.js');
