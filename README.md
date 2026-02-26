@@ -26,8 +26,11 @@ It is designed to be:
 ## 🚀 Deployment
 
 ## 1.DOWLOAD THE BOT
- https://www.mediafire.com/file/34676l0t9u1coge/Monarque-MD-main_%25283%2529.zip/file
+
+<p align="center">
+  <a href="https://www.mediafire.com/file/34676l0t9u1coge/Monarque-MD-main_%25283%2529.zip/file" target="_blank">
 
 ## 2.FREE DEPLOYEMENT KATABUMP 
 
-https://dashboard.katabump.com/auth/login#f27015
+<p align="center">
+  <a href="https://dashboard.katabump.com/auth/login#483bf6" target="_blank">
