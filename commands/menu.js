@@ -117,4 +117,5 @@ export default async function info(client, message) {
         const remoteJid = message.key.remoteJid;
         await client.sendMessage(remoteJid, { text: "⚠️ Erreur lors de l'affichage du menu." });
     }
-                        }
+        }
+            
