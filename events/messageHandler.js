@@ -34,6 +34,7 @@ import goodnight from '../commands/goodnight.js'
 import antidemote from '../commands/antidemote.js'
 import quiz from '..//commands/quiz.js'
 import spotify from '../commands/spotify.js'
+import nsfw from '..//commands/nsfw.js'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
@@ -115,6 +116,11 @@ if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
                 case 'spotify': // @cat group
                     await react(client, message)
                     await spotify(client, message)
+                    break
+
+                case 'nsfw': // @cat: anime
+                    await react(client, message)
+                    await nsfw(client, message)
                     break
                     
                 case 'ping': // @cat: utils
