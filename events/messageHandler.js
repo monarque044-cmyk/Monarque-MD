@@ -31,6 +31,7 @@ import uptime from '../commands/uptime.js'
 import compliment from '../commands/compliment.js'
 import weather from '../commands/weather.js'
 import goodnight from '../commands/goodnight.js'
+import antidemote from '../commands/antidemote.js'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
@@ -89,6 +90,11 @@ async function handleIncomingMessage(client, event) {
                 case 'weather': //@cat: fun
                     await react(client, message)
                     await weather(client, message)
+                    break
+
+                case 'antidemote': // @cat: group
+                    await react(client, message)
+                    await antidemote(client, message)
                     break
                     
                 case 'ping': // @cat: utils
