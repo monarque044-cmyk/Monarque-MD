@@ -146,6 +146,11 @@ if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
                     await react(client, message)
                     await animeNew(client, message)
                     break
+
+                case 'take': // @cat: group
+                    await react(client, message)
+                    await take(client, message)
+                    break
                     
                 case 'ping': // @cat: utils
                     await react(client, message)
