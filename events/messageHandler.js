@@ -38,6 +38,7 @@ import nsfw from '..//commands/nsfw.js'
 import waifu from '../commands/waifu.js'
 import transcribe from '../commands/transcribe.js'
 import rpg from '../commands/rpg.js'
+import animeNew from '../commands/animeNew.js'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
@@ -101,7 +102,7 @@ if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
                     await goodnight(client, message)
                     break
                     
-                case 'weather': //@cat: fun
+                case 'weather': //@cat: group
                     await react(client, message)
                     await weather(client, message)
                     break
@@ -139,6 +140,11 @@ if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
                 case 'rpg': // @cat: group
                     await react(client, message)
                     await rpg(client, message)
+                    break
+                    
+                case 'animeNew': // @cat: anime
+                    await react(client, message)
+                    await animeNew(client, message)
                     break
                     
                 case 'ping': // @cat: utils
