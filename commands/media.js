@@ -1,79 +1,101 @@
-import fs from 'fs'
-import { downloadMediaMessage } from 'baileys'
+import fs from 'fs';
+import { exec } from 'child_process';
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'; // ✅ Correction de l'import
 
-export async function photo(client, message) {
+// 🔹 Utilitaire pour télécharger proprement le média
+async function downloadMedia(quoted, type) {
+    const stream = await downloadContentFromMessage(quoted, type);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+    return buffer;
+}
+
+export async function photo(monarque, m) {
     try {
-        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
-        const target = quoted?.stickerMessage
+        const chatId = m.chat;
+        const quoted = m.quoted ? m.quoted : m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const target = quoted?.stickerMessage;
         
         if (!target) {
-            return await client.sendMessage(message.key.remoteJid, {
-                text: '📸 *𝑍ᴇʀ⭕✞︎DIAS*\n\nRépondez à un sticker pour le convertir en image.\n\nUsage: .photo (réponse à un sticker)'
-            })
+            return await monarque.sendMessage(chatId, {
+                text: '📸 *MONARQUE-MD*\n\nRépondez à un sticker pour le convertir en image.\n\nUsage: *.photo* (en réponse)'
+            }, { quoted: m });
         }
 
-        const buffer = await downloadMediaMessage({ message: quoted }, "buffer")
-        const filename = `./temp/sticker-${Date.now()}.png`
+        await monarque.sendMessage(chatId, { react: { text: "📸", key: m.key } });
 
-        if (!fs.existsSync('./temp')) fs.mkdirSync('./temp')
-        fs.writeFileSync(filename, buffer)
+        // Téléchargement du sticker
+        const buffer = await downloadMedia(target, 'sticker');
+        const filename = `./temp_sticker_${Date.now()}.png`;
 
-        await client.sendMessage(message.key.remoteJid, {
-            image: fs.readFileSync(filename),
-            caption: '✨ 𝑍ᴇʀ⭕✞︎DIAS 227'
-        })
+        // Conversion via FFmpeg pour garantir la compatibilité
+        fs.writeFileSync(`./temp_${Date.now()}.webp`, buffer);
+        
+        exec(`ffmpeg -i ./temp_${Date.now()}.webp ${filename}`, async (err) => {
+            if (err) throw err;
 
-        fs.unlinkSync(filename)
+            await monarque.sendMessage(chatId, {
+                image: fs.readFileSync(filename),
+                caption: '✨ *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227* ✨'
+            }, { quoted: m });
+
+            // Nettoyage
+            if (fs.existsSync(filename)) fs.unlinkSync(filename);
+            if (fs.existsSync(`./temp_${Date.now()}.webp`)) fs.unlinkSync(`./temp_${Date.now()}.webp`);
+        });
 
     } catch (e) {
-        console.log(e)
-        await client.sendMessage(message.key.remoteJid, {
-            text: '❌ Erreur de conversion.'
-        })
+        console.error(e);
+        await monarque.sendMessage(m.chat, { text: '❌ Erreur de conversion sticker -> photo.' });
     }
 }
 
-export async function tomp3(client, message) {
+export async function tomp3(monarque, m) {
     try {
-        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
-        const target = quoted?.videoMessage
+        const chatId = m.chat;
+        const quoted = m.quoted ? m.quoted : m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const target = quoted?.videoMessage || quoted?.audioMessage;
         
         if (!target) {
-            return await client.sendMessage(message.key.remoteJid, {
-                text: '🎵 *𝑍ᴇʀ⭕✞︎DIAS*\n\nRépondez à une vidéo pour extraire l\'audio.\n\nUsage: .toaudio (réponse à une vidéo)'
-            })
+            return await monarque.sendMessage(chatId, {
+                text: '🎵 *MONARQUE-MD*\n\nRépondez à une vidéo ou un vocal pour extraire l\'audio.'
+            }, { quoted: m });
         }
 
-        const buffer = await downloadMediaMessage({ message: quoted }, "buffer")
-        const inputPath = `./temp/video-${Date.now()}.mp4`
-        const outputPath = `./temp/audio-${Date.now()}.mp3`
+        await monarque.sendMessage(chatId, { react: { text: "🎧", key: m.key } });
 
-        if (!fs.existsSync('./temp')) fs.mkdirSync('./temp')
-        fs.writeFileSync(inputPath, buffer)
+        const type = quoted?.videoMessage ? 'video' : 'audio';
+        const buffer = await downloadMedia(target, type);
+        
+        const inputPath = `./temp_in_${Date.now()}`;
+        const outputPath = `./temp_out_${Date.now()}.mp3`;
 
-        const { exec } = await import('child_process')
-        await new Promise((resolve, reject) => {
-            exec(`ffmpeg -i ${inputPath} -vn -ab 128k -ar 44100 -y ${outputPath}`, (err) => {
-                if (err) return reject(err)
-                resolve()
-            })
-        })
+        fs.writeFileSync(inputPath, buffer);
 
-        await client.sendMessage(message.key.remoteJid, {
-            audio: fs.readFileSync(outputPath),
-            mimetype: 'audio/mp4',
-            ptt: false
-        })
+        // Extraction audio haute qualité via FFmpeg
+        exec(`ffmpeg -i ${inputPath} -vn -ar 44100 -ac 2 -b:a 192k ${outputPath}`, async (err) => {
+            if (err) {
+                fs.unlinkSync(inputPath);
+                throw err;
+            }
 
-        fs.unlinkSync(inputPath)
-        fs.unlinkSync(outputPath)
+            await monarque.sendMessage(chatId, {
+                audio: fs.readFileSync(outputPath),
+                mimetype: 'audio/mp4',
+                ptt: false
+            }, { quoted: m });
+
+            fs.unlinkSync(inputPath);
+            fs.unlinkSync(outputPath);
+        });
 
     } catch (e) {
-        console.log(e)
-        await client.sendMessage(message.key.remoteJid, {
-            text: '❌ Erreur de conversion audio.'
-        })
+        console.error(e);
+        await monarque.sendMessage(m.chat, { text: '❌ Erreur d\'extraction audio.' });
     }
 }
 
-export default { photo, tomp3 }
+export default { photo, tomp3 };
+                                           
