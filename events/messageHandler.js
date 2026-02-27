@@ -46,7 +46,8 @@ async function handleIncomingMessage(client, event) {
     const messages = event.messages
     const publicMode = configmanager.config.users[number].publicMode
     const prefix = configmanager.config.users[number].prefix
-
+const triviaGames = {}; // ✅ Déclaration indispensable pour éviter l'erreur
+    
     for (const message of messages) {
         const messageBody = (message.message?.extendedTextMessage?.text ||
                            message.message?.conversation || '').toLowerCase()
@@ -79,13 +80,14 @@ async function handleIncomingMessage(client, event) {
             const command = parts[0]
 
             // --- Bloc de réponse automatique au Quiz ---
-// On vérifie si un quiz est en cours et si le message est uniquement un chiffre
-if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
-    const quizAnswer = [m.body.trim()];
-    await quiz.execute(monarque, m, quizAnswer);
-    return; // Stop l'exécution pour ne pas traiter d'autres commandes
+// On utilise 'remoteJid' pour identifier le groupe et 'messageBody' pour la réponse
+if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().length < 3) {
+    const quizAnswer = [messageBody.trim()];
+    // On utilise 'client' (ton socket) et 'message' (l'événement)
+    await quiz.execute(client, message, quizAnswer);
+    return; 
 }
-            
+                        
             switch (command) {
                 case 'uptime': // @cat: utils
                     await react(client, message)
