@@ -2,7 +2,7 @@ import axios from "axios";
 import he from "he";
 import fs from "fs";
 
-const triviaGames = {}; 
+export const triviaGames = {}; // Ajout de "export" ici
 const dbPath = "./database.json";
 
 // Vérification de l'existence de la base de données
