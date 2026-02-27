@@ -1,122 +1,103 @@
-// ==================== commands/antidemote.js ====================
 import fs from 'fs';
 import path from 'path';
-import checkAdminOrOwner from '../system/checkAdmin.js';
-import { contextInfo } from '../system/contextInfo.js';
 
+// Chemins et Initialisation
 const antiDemoteFile = path.join(process.cwd(), 'system/antidemote.json');
+if (!fs.existsSync(path.join(process.cwd(), 'system'))) {
+    fs.mkdirSync(path.join(process.cwd(), 'system'), { recursive: true });
+}
+
 let antiDemoteData = {};
-if (fs.existsSync(antiDemoteFile)) {
-  try { 
-    antiDemoteData = JSON.parse(fs.readFileSync(antiDemoteFile, 'utf-8')); 
-  } catch { 
-    antiDemoteData = {}; 
-  }
+try {
+    if (fs.existsSync(antiDemoteFile)) {
+        antiDemoteData = JSON.parse(fs.readFileSync(antiDemoteFile, 'utf-8'));
+    }
+} catch (e) {
+    antiDemoteData = {};
 }
 
 function saveAntiDemote() {
-  fs.writeFileSync(antiDemoteFile, JSON.stringify(antiDemoteData, null, 2));
+    fs.writeFileSync(antiDemoteFile, JSON.stringify(antiDemoteData, null, 2));
 }
 
 const processing = new Set();
 
 export default {
-  name: 'antidemote',
-  description: '🛡️ Prevent automatic demotion of admins',
-  category: 'Groupe',
-  group: true,
-  admin: true,
-  botAdmin: true,
+    name: 'antidemote',
+    description: '🛡️ Empêche la destitution automatique des admins',
+    category: 'Groupe',
+    
+    // La fonction de commande (appelée via ton switch case)
+    async execute(monarque, m, args) {
+        const chatId = m.chat;
+        if (!m.isGroup) return monarque.sendMessage(chatId, { text: '❌ Cette commande ne fonctionne que dans les groupes.' }, { quoted: m });
 
-  run: async (monarque, m, args) => {
-    if (!m.isGroup) 
-      return kaya.sendMessage(m.chat, { text: '❌ This command only works in groups.', contextInfo }, { quoted: m });
+        const action = args[0]?.toLowerCase();
 
-    const permissions = await checkAdminOrOwner(kaya, m.chat, m.sender);
-    if (!permissions.isAdmin && !permissions.isOwner)
-      return monarque.sendMessage(m.chat, { text: '🚫 Only group admins or the owner can toggle AntiDemote.', contextInfo }, { quoted: m });
-
-    const chatId = m.chat;
-    const action = args[0]?.toLowerCase();
-
-    // ℹ️ Invalid usage
-    if (!['on', 'off', 'status'].includes(action)) {
-      return monarque.sendMessage(chatId, { 
-        text: `*ANTIDEMOTE COMMAND*\n\n` +
-              `.antidemote on     → Enable AntiDemote\n` +
-              `.antidemote off    → Disable AntiDemote\n` +
-              `.antidemote status → Check current status`,
-        contextInfo
-      }, { quoted: m });
-    }
-
-    if (action === 'on') {
-      const metadata = await kaya.groupMetadata(chatId);
-      antiDemoteData[chatId] = { 
-        enabled: true, 
-        protectedAdmins: metadata.participants
-          .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
-          .map(p => p.id)
-      };
-      saveAntiDemote();
-      return monarque.sendMessage(m.chat, { text: '✅ *AntiDemote ENABLED*', contextInfo }, { quoted: m });
-    }
-
-    if (action === 'off') {
-      delete antiDemoteData[chatId];
-      saveAntiDemote();
-      return monarque.sendMessage(m.chat, { text: '❌ *AntiDemote DISABLED*', contextInfo }, { quoted: m });
-    }
-
-    if (action === 'status') {
-      const isActive = antiDemoteData[chatId]?.enabled || false;
-      const count = antiDemoteData[chatId]?.protectedAdmins?.length || 0;
-      return monarque.sendMessage(chatId, { 
-        text: isActive ? `✅ *AntiDemote ENABLED*\nProtected admins: ${count}` : '❌ *AntiDemote DISABLED*',
-        contextInfo
-      }, { quoted: m });
-    }
-  },
-
-  participantUpdate: async (monarque, update) => {
-    const chatId = update.id;
-    const participants = update.participants;
-    const action = update.action;
-    if (!antiDemoteData[chatId]?.enabled) return;
-    if (action !== 'demote') return;
-
-    const metadata = await kaya.groupMetadata(chatId).catch(() => null);
-    if (!metadata) return;
-
-    const botId = monarque.user.id;
-    antiDemoteData[chatId].protectedAdmins = [
-      ...new Set([
-        ...(antiDemoteData[chatId].protectedAdmins || []),
-        ...metadata.participants.filter(p => p.admin === 'admin' || p.admin === 'superadmin').map(p => p.id)
-      ])
-    ];
-    saveAntiDemote();
-
-    for (const user of participants) {
-      if (user === botId) continue;
-      const key = `${chatId}-${user}-demote`;
-      if (processing.has(key)) continue;
-      processing.add(key);
-
-      setTimeout(async () => {
-        try {
-          if (antiDemoteData[chatId].protectedAdmins.includes(user)) {
-            await monarque.groupParticipantsUpdate(chatId, [user], 'promote');
-            await monarque.sendMessage(chatId, {
-              text: `🛡️ *AntiDemote Active*\n@${user.split('@')[0]} has been automatically re-promoted.`,
-              mentions: [user],
-              contextInfo
-            });
-          }
-        } finally {
-          processing.delete(key);
+        if (action === 'on') {
+            const metadata = await monarque.groupMetadata(chatId);
+            antiDemoteData[chatId] = {
+                enabled: true,
+                protectedAdmins: metadata.participants
+                    .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                    .map(p => p.id)
+            };
+            saveAntiDemote();
+            return monarque.sendMessage(chatId, { text: '✅ *Anti-Demote ACTIVÉ*.\nLes admins actuels sont désormais protégés.' }, { quoted: m });
         }
-      }, 1500);
+
+        if (action === 'off') {
+            delete antiDemoteData[chatId];
+            saveAntiDemote();
+            return monarque.sendMessage(chatId, { text: '❌ *Anti-Demote DÉSACTIVÉ*.' }, { quoted: m });
+        }
+
+        if (action === 'status') {
+            const isActive = antiDemoteData[chatId]?.enabled || false;
+            return monarque.sendMessage(chatId, { 
+                text: isActive ? `✅ *Anti-Demote* est actuellement **ACTIF**.` : '❌ *Anti-Demote* est actuellement **INACTIF**.' 
+            }, { quoted: m });
+        }
+
+        // Aide si l'argument est invalide
+        return monarque.sendMessage(chatId, { 
+            text: `*COMMANDE ANTIDEMOTE*\n\nUsage :\n.antidemote on\n.antidemote off\n.antidemote status`
+        }, { quoted: m });
+    },
+
+    // ⚠️ CETTE FONCTION DOIT ÊTRE APPELÉE DANS TON INDEX.JS
+    async onUpdate(monarque, update) {
+        const { id, participants, action } = update;
+        
+        if (!antiDemoteData[id]?.enabled) return;
+        if (action !== 'demote') return;
+
+        const botId = monarque.user.id.split(':')[0] + '@s.whatsapp.net';
+
+        for (const user of participants) {
+            if (user === botId) continue;
+            
+            const key = `${id}-${user}-demote`;
+            if (processing.has(key)) continue;
+            processing.add(key);
+
+            setTimeout(async () => {
+                try {
+                    // On vérifie si l'utilisateur était dans notre liste de protection
+                    if (antiDemoteData[id].protectedAdmins.includes(user)) {
+                        await monarque.groupParticipantsUpdate(id, [user], 'promote');
+                        await monarque.sendMessage(id, {
+                            text: `🛡️ *Sécurité Anti-Demote*\n@${user.split('@')[0]} a été rétabli administrateur.`,
+                            mentions: [user]
+                        });
+                    }
+                } catch (err) {
+                    console.error('Erreur Anti-Demote:', err);
+                } finally {
+                    processing.delete(key);
+                }
+            }, 1000);
+        }
     }
-  }
 };
+            
