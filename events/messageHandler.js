@@ -128,10 +128,13 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                     break
 
                 case 'nsfw': // @cat: anime
-                    await react(client, message)
-                    await nsfw(client, message)
-                    break
-
+    await react(client, message);
+    // On extrait les arguments (ex: le type de photo nsfw)
+    const nsfwArgs = parts.slice(1); 
+    // ✅ APPEL CORRIGÉ : On utilise .execute
+    await nsfw.execute(client, message, nsfwArgs);
+    break;
+                    
                 case 'waifu': // @cat: anime
                     await react(client, message)
                     await waifu(client, message)
