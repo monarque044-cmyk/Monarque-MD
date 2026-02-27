@@ -32,6 +32,7 @@ import compliment from '../commands/compliment.js'
 import weather from '../commands/weather.js'
 import goodnight from '../commands/goodnight.js'
 import antidemote from '../commands/antidemote.js'
+import quiz from '..//commands/quiz.js'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
@@ -103,6 +104,11 @@ if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
                 case 'antidemote': // @cat: group
                     await react(client, message)
                     await antidemote(client, message)
+                    break
+
+                case 'quiz': // @cat: fun
+                    await react(client, message)
+                    await quiz(client, message)
                     break
                     
                 case 'ping': // @cat: utils
