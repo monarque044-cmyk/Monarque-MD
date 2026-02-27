@@ -1,69 +1,64 @@
 import axios from 'axios';
+import fs from 'fs';
 
-// Sources SFW (soft anime / waifu)
-const SOURCES = [
-  'https://api.waifu.pics/sfw/waifu',
-  'https://api.waifu.pics/sfw/neko',
-  'https://api.waifu.pics/sfw/megumin',
-  'https://nekos.best/api/v2/waifu',
-  'https://nekos.best/api/v2/neko'
-];
-
-// Cooldown par utilisateur / groupe
-const cooldown = new Map();
-
-async function fetchImage() {
-  for (const url of SOURCES) {
-    try {
-      const res = await axios.get(url, { timeout: 15000 });
-      if (res.data?.url) return res.data.url;
-      if (res.data?.results?.[0]?.url) return res.data.results[0].url;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
+const dbPath = './database.json';
+const CATEGORIES = ['waifu', 'neko', 'shinobu', 'megumin']; // Catégories SFW (Safe For Work)
 
 export default {
-  name: 'nsfw',
-  description: '🎨 Anime / fanart soft (SFW) utilisable en groupe et privé',
-  category: 'Anime',
-  ownerOnly: false,
+    name: 'image',
+    alias: ['img', 'pic'],
+    category: 'Fun',
+    description: 'Affiche une image aléatoire (Gestion par admin)',
 
-  async execute(sock, m) {
-    try {
-      const userId = m.sender;
-      const chatId = m.chat;
-      const key = `${chatId}-${userId}`;
+    async execute(monarque, m, args) {
+        const chatId = m.chat;
 
-      // 🔹 Cooldown 10s
-      const last = cooldown.get(key);
-      if (last && Date.now() - last < 10000) return;
+        if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({ groups: {} }));
+        const db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
 
-      cooldown.set(key, Date.now());
-      setTimeout(() => cooldown.delete(key), 10000);
+        const action = args[0]?.toLowerCase();
+        if (action === 'on' || action === 'off') {
+            const groupMetadata = m.isGroup ? await monarque.groupMetadata(chatId) : null;
+            const isAdmin = groupMetadata?.participants.find(p => p.id === m.sender)?.admin;
 
-      const imageUrl = await fetchImage();
-      if (!imageUrl) {
-        return sock.sendMessage(
-          chatId,
-          { text: '❌ Impossible de charger une image pour le moment.' },
-          { quoted: m }
-        );
-      }
+            if (m.isGroup && !isAdmin) {
+                return monarque.sendMessage(chatId, { text: '🚫 Seuls les administrateurs peuvent configurer cette commande.' }, { quoted: m });
+            }
 
-      await sock.sendMessage(
-        chatId,
-        {
-          image: { url: imageUrl },
-          caption: `🎨 *Anime Art – Soft*\n\nby MONARQUE‑MD`
-        },
-        { quoted: m }
-      );
+            if (!db.groups) db.groups = {};
+            db.groups[chatId] = { active: (action === 'on') };
+            fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
 
-    } catch (err) {
-      console.error('❌ NSFW error:', err);
+            return monarque.sendMessage(chatId, { 
+                text: `✅ Commande d'images ${action === 'on' ? 'ACTIVÉE' : 'DÉSACTIVÉE'}.` 
+            }, { quoted: m });
+        }
+
+        const isEnabled = db.groups?.[chatId]?.active || !m.isGroup;
+
+        if (!isEnabled) {
+            return monarque.sendMessage(chatId, { 
+                text: '⚠️ *Cette commande est désactivée ici.*\nUn administrateur peut taper `.image on` pour l\'activer.' 
+            }, { quoted: m });
+        }
+
+        try {
+            await monarque.sendMessage(chatId, { react: { text: "📷", key: m.key } });
+
+            const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+            const res = await axios.get(`https://api.waifu.pics{category}`);
+            
+            if (!res.data?.url) throw new Error('Erreur de réponse');
+
+            await monarque.sendMessage(chatId, {
+                image: { url: res.data.url },
+                caption: `✨ *Image (${category})*\n\n_Utilisez .image off pour désactiver._`
+            }, { quoted: m });
+
+        } catch (err) {
+            console.error('Erreur:', err.message);
+            await monarque.sendMessage(chatId, { text: '❌ Impossible de récupérer l\'image pour le moment.' }, { quoted: m });
+        }
     }
-  }
 };
+                                        
