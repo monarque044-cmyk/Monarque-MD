@@ -1,5 +1,6 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import stylizedChar from '../utils/fancy.js';
+import { DigixNew } from '../utils/MomoKex.js';
 
 export default {
     name: 'viewonce',
