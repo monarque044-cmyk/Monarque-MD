@@ -53,7 +53,7 @@ export async function respond(client, message) {
         if (messageBody.includes(`@${lid}`)) {
             await client.sendMessage(remoteJid, {
                 audio: { url: "database/DigiX.mp3" },
-                mimetype: "audio/mp4",
+                mimetype: "audio/mp3",
                 ptt: true,
                 contextInfo: { 
                     stanzaId: message.key.id,
