@@ -89,19 +89,55 @@ export default {
                 isCorrect = true;
             }
 
-            if (isCorrect) {
-                saveScore(m.sender);
-                const currentScore = getScores()[m.sender];
-                await monarque.sendMessage(chatId, { 
-                    text: `🎉 *Bravo @${m.sender.split("@")[0]} !*\n\n+1 point (Total: ${currentScore} pts)\nLa réponse était : *${game.correctAnswer}*`, 
-                    mentions: [m.sender] 
-                }, { quoted: m });
-            } else {
-                await monarque.sendMessage(chatId, { text: `❌ Raté ! La bonne réponse était : *${game.correctAnswer}*` });
+                    if (isCorrect) {
+            const userId = m.sender;
+            const dbPath = './database.json';
+            
+            // Lecture de la base de données
+            let data = {};
+            if (fs.existsSync(dbPath)) {
+                data = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
             }
-            delete triviaGames[chatId];
+
+            // Initialisation du joueur si c'est sa première victoire
+            if (!data[userId]) {
+                data[userId] = { xp: 0, level: 1, prestige: 0, coins: 0 };
+            }
+
+            // --- Logique des Récompenses ---
+            const xpGagne = 50; 
+            const coinsGagnes = 25;
+            data[userId].xp += xpGagne;
+            data[userId].coins += coinsGagnes;
+
+            // --- Logique de Level Up ---
+            const xpNecessaire = data[userId].level * 150; 
+            let levelUpMsg = "";
+
+            if (data[userId].xp >= xpNecessaire) {
+                data[userId].level += 1;
+                data[userId].xp = 0; // Réinitialise l'XP pour le prochain palier
+                levelUpMsg = `\n\n🎊 *LEVEL UP !* 🎊\n✨ Tu es maintenant niveau *${data[userId].level}* !`;
+            }
+
+            // Sauvegarde immédiate
+            fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+
+            // Envoi du message stylisé
+            const vicoireTxt = `🎉 *BIEN JOUÉ @${userId.split('@')[0]} !*\n\n` +
+                               `✅ La réponse était : *${game.correctAnswer}*\n` +
+                               `💰 +${coinsGagnes} pièces\n` +
+                               `🌟 +${xpGagne} XP${levelUpMsg}`;
+
+            await monarque.sendMessage(chatId, { 
+                text: vicoireTxt, 
+                mentions: [userId] 
+            }, { quoted: m });
+
+            delete triviaGames[chatId]; // On ferme la session de quiz
             return;
-        }
+                    }
+            
 
         // ================== NOUVELLE QUESTION ==================
         if (triviaGames[chatId]) return monarque.sendMessage(chatId, { text: "⚠️ Un quiz est déjà lancé ! Réponds d'abord." });
