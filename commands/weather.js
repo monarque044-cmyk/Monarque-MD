@@ -1,4 +1,5 @@
 import axios from 'axios';
+import stylizedChar from '../utils/fancy.js';
 
 export default {
     name: 'weather',
