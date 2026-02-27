@@ -1,101 +1,68 @@
 import pkg from 'wa-sticker-formatter';
 const { Sticker, StickerTypes } = pkg;
-import { downloadMediaMessage } from "baileys";
+import { downloadMediaMessage } from "@whiskeysockets/baileys"; // ✅ Correction de l'import
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
-import sharp from "sharp";
-import ffmpeg from "fluent-ffmpeg";
 
-export async function sticker(client, message) {
+export async function sticker(monarque, m) {
+    const chatId = m.chat;
     let tempInput, tempOutput;
 
     try {
-        const remoteJid = message.key.remoteJid;
-        const quotedMessage = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        const username = message.pushName || "Inconnu"; // Nom de l'expéditeur
+        // 1. Détection du message (direct ou cité)
+        const quoted = m.quoted ? m.quoted : m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const msg = m.message?.imageMessage || m.message?.videoMessage || quoted?.imageMessage || quoted?.videoMessage;
 
-        if (!quotedMessage) {
-            return client.sendMessage(remoteJid, { text: "❌ Respond to an image or video to convert it into a sticker!" });
+        if (!msg) {
+            return monarque.sendMessage(chatId, { text: "❌ *Usage:* Envoie ou réponds à une *image* ou *vidéo* avec .sticker" }, { quoted: m });
         }
 
-        // Détection du type de média
-        const isVideo = !!quotedMessage.videoMessage;
-        const isImage = !!quotedMessage.imageMessage;
+        const username = m.pushName || "Monarque User";
+        const isVideo = !!(msg.videoMessage || (quoted && quoted.videoMessage));
 
-        if (!isVideo && !isImage) {
-            return client.sendMessage(remoteJid, { text: "❌ The quoted message is not an image or a video !" });
-        }
+        // Réaction de chargement
+        await monarque.sendMessage(chatId, { react: { text: "⏳", key: m.key } });
 
-        // Télécharger le média
-        const mediaBuffer = await downloadMediaMessage({ message: quotedMessage, client }, "buffer");
+        // 2. Téléchargement du média
+        // On passe l'objet correct pour le téléchargement
+        const buffer = await downloadMediaMessage(
+            m.quoted ? { message: quoted } : m,
+            "buffer",
+            {},
+            { logger: console }
+        );
 
-        if (!mediaBuffer) {
-            return client.sendMessage(remoteJid, { text: "❌ Media download failed !" });
-        }
+        if (!buffer) throw new Error("Échec du téléchargement du média.");
 
-        // Générer des noms de fichiers temporaires uniques
-        const uniqueId = Date.now();  // Utiliser l'heure actuelle pour rendre le nom unique
-        tempInput = isVideo ? `./temp_video_${uniqueId}.mp4` : `./temp_image_${uniqueId}.jpg`;
-        tempOutput = `./temp_sticker_${uniqueId}.webp`;
+        // 3. Gestion des fichiers temporaires
+        const uniqueId = Date.now();
+        tempInput = `./temp_${uniqueId}${isVideo ? '.mp4' : '.jpg'}`;
+        fs.writeFileSync(tempInput, buffer);
 
-        fs.writeFileSync(tempInput, mediaBuffer);
-
-        if (isVideo) {
-            console.log("⚙️ Conversion to sticker...");
-
-            await new Promise((resolve, reject) => {
-                ffmpeg(tempInput)
-                    .output(tempOutput)
-                    .outputOptions([
-                        "-vf scale=512:512:flags=lanczos",
-                        "-c:v libwebp",
-                        "-q:v 50",
-                        "-preset default",
-                        "-loop 0",
-                        "-an",
-                        "-vsync 0"
-                    ])
-                    .on("end", resolve)
-                    .on("error", (err) => {
-                        console.error("❌ Erreur FFmpeg :", err);
-                        reject(err);
-                    })
-                    .run();
-            });
-
-        } else {
-            console.log("⚙️ Conversion to sticker...");
-
-            await sharp(tempInput)
-                .resize(512, 512, { fit: "inside" })
-                .webp({ quality: 80 })
-                .toFile(tempOutput);
-        }
-
-        // Créer le sticker
-        const sticker = new Sticker(tempOutput, {
-            pack: `${username}`,
-            author: `${username}`,
-            type: isVideo ? StickerTypes.FULL : StickerTypes.DEFAULT, // Préserver les animations
-            quality: 80,
-            animated: isVideo,
+        // 4. Création du sticker avec wa-sticker-formatter (Gère FFmpeg en interne si installé)
+        const sticker = new Sticker(tempInput, {
+            pack: `𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227`, // Nom du pack
+            author: username,      // Auteur (celui qui a fait la commande)
+            type: StickerTypes.FULL,
+            categories: ['🤩', '🚀'],
+            id: '12345',
+            quality: 60,
         });
 
-        // Convertir en format sticker
+        // 5. Envoi direct
         const stickerMessage = await sticker.toMessage();
+        await monarque.sendMessage(chatId, stickerMessage, { quoted: m });
 
-        // Envoyer le sticker
-        await client.sendMessage(remoteJid, stickerMessage);
+        // Réaction de succès
+        await monarque.sendMessage(chatId, { react: { text: "✅", key: m.key } });
 
     } catch (error) {
-        console.error("❌ Erreur :", error);
-        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-        await client.sendMessage(message.key.remoteJid, { text: `⚠️ Error converting media to sticker : ${errorMessage}` });
+        console.error("❌ Sticker Error:", error.message);
+        await monarque.sendMessage(chatId, { text: `⚠️ Erreur : ${error.message}` }, { quoted: m });
     } finally {
-        // Nettoyage des fichiers temporaires
+        // Nettoyage sécurisé
         if (tempInput && fs.existsSync(tempInput)) fs.unlinkSync(tempInput);
-        if (tempOutput && fs.existsSync(tempOutput)) fs.unlinkSync(tempOutput);
     }
 }
 
