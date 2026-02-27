@@ -1,5 +1,5 @@
 {
-  "name": "Monarque MD",
+  "name": "monarque-md",
   "version": "1.0.0",
   "description": "Monarque Crew WhatsApp Bot — a powerful, fun and intelligent bot packed with extra features, AI capabilities and a sleek futuristic design",
   "main": "index.js",
@@ -17,28 +17,16 @@
     "crew"
   ],
   "dependencies": {
-    "baileys": "npm:baileys@latest",
+    "@whiskeysockets/baileys": "latest",
     "axios": "^1.7.7",
     "axios-retry": "^3.9.1",
     "uuid": "^9.0.1",
     "wa-sticker-formatter": "^4.4.4",
     "pino": "^8.18.0",
-    "crypto": "latest",
     "file-type": "^19.0.0",
-    "form-data": "^4.0.1"
+    "form-data": "^4.0.1",
+    "he": "^1.2.0"
   },
-  {
-  "dependencies": {
-    "axios": "^1.x.x",
-    "form-data": "^4.0.0" 
-  }
-},
-"dependencies": {
-  "axios": "^1.x.x",
-  "he": "^1.x.x",
-  ...
-},
-
   "author": "Monarque MD",
   "license": "ISC"
-},
+}
