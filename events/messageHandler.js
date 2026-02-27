@@ -119,7 +119,8 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
 
                 case 'quiz': // @cat: fun
                     await react(client, message)
-                    await quiz(client, message)
+                    const quizAegs = part.slice(1);
+                    await quiz.execute(client, message, quizArgs)
                     break
 
                 case 'spotify': // @cat group
@@ -137,7 +138,8 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                     
                 case 'waifu': // @cat: anime
                     await react(client, message)
-                    await waifu(client, message)
+                    const waifuArgs = part.slice(1);
+                    await waifu.execute(client, message, waifuArgs)
                     break
 
                 case 'transcribe': // @cat: group
