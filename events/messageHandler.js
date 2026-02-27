@@ -37,6 +37,7 @@ import spotify from '../commands/spotify.js'
 import nsfw from '..//commands/nsfw.js'
 import waifu from '../commands/waifu.js'
 import transcribe from '../commands/transcribe.js'
+import rpg from '../commands/rpg.js'
 
 async function handleIncomingMessage(client, event) {
     let lid = client?.user?.lid.split(':')[0] + '@lid'
@@ -133,6 +134,11 @@ if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
                 case 'transcribe': // @cat: group
                     await react(client, message)
                     await transcribe(client, message)
+                    break
+
+                case 'rpg': // @cat: group
+                    await react(client, message)
+                    await rpg(client, message)
                     break
                     
                 case 'ping': // @cat: utils
