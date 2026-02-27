@@ -1,85 +1,64 @@
-import { Sticker, createSticker, StickerTypes } from 'wa-sticker-formatter' // ES6
-// const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter') // CommonJS
-
-import { downloadMediaMessage } from "baileys";
+import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+import { downloadMediaMessage } from "@whiskeysockets/baileys"; // ✅ Correction de l'import
 import fs from "fs";
 import path from "path";
 import stylizedChar from '../utils/fancy.js';
 
 export async function take(client, message) {
+    const remoteJid = message.key.remoteJid;
+
     try {
-        const remoteJid = message.key.remoteJid;
-        const messageBody = message.message?.extendedTextMessage?.text || message.message?.conversation || '';
-        const quotedMessage = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        // 1. Récupération des arguments et du message cité
+        const msgText = message.body || message.message?.conversation || message.message?.extendedTextMessage?.text || "";
+        const args = msgText.split(' ').slice(1);
+        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-        const commandAndArgs = messageBody.slice(1).trim(); // Remove prefix and trim
-        const parts = commandAndArgs.split(/\s+/); // Split command and arguments
-
-        let username;
-        let text;
-        const args = parts.slice(1); // Extract arguments
-
-        if (args.length <= 0) {
-            username = message.pushName || "Unknown"; // Fallback to sender's name
-            text = username;
-        } else {
-            username = args.join(" "); // Combine all args into one string
-            text = username;
+        // Vérification : est-ce un sticker ?
+        if (!quoted || !quoted.stickerMessage) {
+            return client.sendMessage(remoteJid, { 
+                text: stylizedChar("_❌ Réponds à un sticker pour modifier ses métadonnées (Pack/Auteur)_") 
+            }, { quoted: message });
         }
 
-        if (!quotedMessage || !quotedMessage.stickerMessage) {
-            return client.sendMessage(remoteJid, { text: stylizedChar("❌ Reply to a sticker to modify it!" )});
-        }
+        // Définition du Nom du Pack et de l'Auteur
+        const packName = args.length > 0 ? args.join(" ") : (message.pushName || "Monarque MD");
+        const authorName = "𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227"; // Ta signature personnalisée
 
-        // Download the original sticker
-        const stickerBuffer = await downloadMediaMessage({message:quotedMessage},
+        await client.sendMessage(remoteJid, { react: { text: "📥", key: message.key } });
+
+        // 2. Téléchargement du sticker original
+        // Utilisation de la méthode correcte pour @whiskeysockets/baileys
+        const buffer = await downloadMediaMessage(
+            message.message.extendedTextMessage.contextInfo,
             'buffer',
             {},
-            { logger: console } // Ajout du logger pour le débogage (important!)
+            { logger: console }
         );
 
-        if (!stickerBuffer) {
-            return client.sendMessage(remoteJid, { text: "❌ Failed to download sticker!" });
+        if (!buffer) {
+            return client.sendMessage(remoteJid, { text: "❌ Erreur lors du téléchargement du sticker." });
         }
 
-        // Save temporary sticker file
-        const tempStickerPath = path.resolve("./temp_sticker.webp");
+        // 3. Création du nouveau sticker avec les nouvelles métadonnées
+        const sticker = new Sticker(buffer, {
+            pack: packName,
+            author: authorName,
+            type: StickerTypes.FULL,
+            categories: ['🤩', '🚀'],
+            id: '12345',
+            quality: 70, // Qualité augmentée pour 2026
+        });
 
-        fs.writeFileSync(tempStickerPath, stickerBuffer);
+        // 4. Envoi direct via la méthode intégrée de wa-sticker-formatter
+        const stickerMessage = await sticker.toMessage();
+        await client.sendMessage(remoteJid, stickerMessage, { quoted: message });
 
-        // Detect if the sticker is animated
-        const isAnimated = quotedMessage.stickerMessage.isAnimated || false;
-
-
-        // Modify metadata with the user's input
-        const sticker = new Sticker(tempStickerPath, {
-            pack: username, // The pack name
-            author: text, // The author name
-            type: StickerTypes.FULL, // The sticker type
-            categories: ['🤩', '🎉'], // The sticker category
-            id: '12345', // The sticker id
-            quality: 50, // The quality of the output file
-            background: '#000000' // The sticker background color (only for full stickers)
-        })
-        
-        const buffer = await sticker.toBuffer() // convert to buffer
-        // or save to file
-        await sticker.toFile('sticker.webp')
-        
-        // or get Baileys-MD Compatible Object
-        client.sendMessage(remoteJid, await sticker.toMessage())
-        
-    
-        // Send sticker
-        // await client.sendMessage(remoteJid, stickerMessage, { quoted: message });
-
-        // Cleanup
-        fs.unlinkSync(tempStickerPath);
-        console.log(`✅ Sticker sent successfully with "${username}" metadata!`);
+        // Réaction de succès
+        await client.sendMessage(remoteJid, { react: { text: "✅", key: message.key } });
 
     } catch (error) {
-        console.error("❌ Error:", error);
-        await client.sendMessage(message.key.remoteJid, { text: `⚠️ Error modifying sticker: ${error}` });
+        console.error("❌ Error Take Sticker:", error);
+        await client.sendMessage(remoteJid, { text: `⚠️ Erreur : ${error.message}` });
     }
 }
 
