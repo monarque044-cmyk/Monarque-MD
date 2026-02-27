@@ -71,6 +71,14 @@ async function handleIncomingMessage(client, event) {
             const parts = commandAndArgs.split(/\s+/)
             const command = parts[0]
 
+            // --- Bloc de réponse automatique au Quiz ---
+// On vérifie si un quiz est en cours et si le message est uniquement un chiffre
+if (triviaGames[m.chat] && !isNaN(m.body.trim()) && m.body.trim().length < 3) {
+    const quizAnswer = [m.body.trim()];
+    await quiz.execute(monarque, m, quizAnswer);
+    return; // Stop l'exécution pour ne pas traiter d'autres commandes
+}
+            
             switch (command) {
                 case 'uptime': // @cat: utils
                     await react(client, message)
