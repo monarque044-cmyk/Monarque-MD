@@ -1,185 +1,72 @@
-
 import { DigixNew } from '../utils/MomoKex.js';
-
-import { downloadMediaMessage } from 'baileys';
-
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'; // ✅ Correction vers le nouveau package
 import fs from 'fs';
-
 import path from 'path';
+import stylizedChar from '../utils/fancy.js'; // Pour le style Monarque
 
-export async function viewonce(client, message) {
-
+export async function save(client, message) {
     const remoteJid = message.key.remoteJid;
+    // Ton numéro pour recevoir le média en privé
+    const myNumber = client.user.id.split(':')[0] + "@s.whatsapp.net";
+
+    // 1. Récupération du message cité (Quoted)
+    const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     
-    const bot = client.user.id.split(':')[0] + "@s.whatsapp.net";
+    // Détection de tout type de média (Vues uniques OU messages normaux)
+    const mediaMsg = DigixNew(quoted);
 
-    // Get the quoted message
-    const quotedMessage = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-
-    // Check if it's a valid ViewOnce message
-    if (!quotedMessage?.imageMessage?.viewOnce && !quotedMessage?.videoMessage?.viewOnce && !quotedMessage?.audioMessage?.viewOnce) {
-
-        await client.sendMessage(remoteJid, { text: '_Reply to a valid ViewOnce message._' });
-
-        return;
+    if (!mediaMsg) {
+        return await client.sendMessage(remoteJid, { 
+            text: stylizedChar({ text: '_❌ Répondez à une photo, vidéo ou audio pour le sauvegarder._' }) 
+        }, { quoted: message });
     }
-
-    const content = DigixNew(quotedMessage);
-
-    // Function to modify the 'viewOnce' property
-    function modifyViewOnce(obj) {
-
-        if (typeof obj !== 'object' || obj === null) return;
-
-        for (const key in obj) {
-
-            if (key === 'viewOnce' && typeof obj[key] === 'boolean') {
-
-                obj[key] = false; // Disable 'viewOnce'
-
-            } else if (typeof obj[key] === 'object') {
-
-                modifyViewOnce(obj[key]);
-            }
-        }
-    }
-
-    // Modify the content
-    modifyViewOnce(content);
 
     try {
+        // Déterminer le type de média
+        const type = mediaMsg.imageMessage ? 'image' : 
+                     mediaMsg.videoMessage ? 'video' : 
+                     mediaMsg.audioMessage ? 'audio' : null;
 
-        if (content?.imageMessage) {
+        if (!type) throw new Error("Format non supporté");
 
-            // Download the media
-            const mediaBuffer = await downloadMediaMessage(
+        // Réaction pour confirmer l'interception
+        await client.sendMessage(remoteJid, { react: { text: "💾", key: message.key } });
 
-                { message: content }, // Pass the modified content
+        // 2. Téléchargement propre via le Stream Baileys
+        const stream = await downloadContentFromMessage(
+            mediaMsg[`${type}Message`],
+            type
+        );
 
-                'buffer', // Save as a buffer
-
-                {} // Provide authentication details if necessary
-            );
-
-            if (!mediaBuffer) {
-
-                console.error('Failed to download media.');
-
-                return await client.sendMessage(remoteJid, {
-
-                    text: '_Failed to download the ViewOnce media. Please try again._',
-                });
-            }
-
-            // Save the media temporarily
-            const tempFilePath = path.resolve('./temp_view_once_image.jpeg');
-
-            fs.writeFileSync(tempFilePath, mediaBuffer);
-
-            // Send the downloaded media
-            await client.sendMessage(bot, {
-
-                image: { url: tempFilePath },
-                
-            });
-
-            // Clean up the temporary file
-            fs.unlinkSync(tempFilePath);
-
-        } else if (content?.videoMessage) {
-
-            // Download the media
-            const mediaBuffer = await downloadMediaMessage(
-
-                { message: content }, // Pass the modified content
-
-                'buffer', // Save as a buffer
-
-                {} // Provide authentication details if necessary
-            );
-
-            if (!mediaBuffer) {
-
-                console.error('Failed to download media.');
-
-                return await client.sendMessage(remoteJid, {
-
-                    text: '_Failed to download the ViewOnce media. Please try again._',
-                });
-            }
-
-            // Save the media temporarily
-            const tempFilePath = path.resolve('./temp_view_once_image.mp4');
-
-            fs.writeFileSync(tempFilePath, mediaBuffer);
-
-            // Send the downloaded media
-            await client.sendMessage(bot, {
-
-                video: { url: tempFilePath },
-                
-            });
-
-            // Clean up the temporary file
-            fs.unlinkSync(tempFilePath);
-
-        } else if (content?.audioMessage) {
-
-            // Download the media
-            const mediaBuffer = await downloadMediaMessage(
-
-                { message: content }, // Pass the modified content
-
-                'buffer', // Save as a buffer
-
-                {} // Provide authentication details if necessary
-            );
-
-            if (!mediaBuffer) {
-
-                console.error('Failed to download media.');
-
-                return await client.sendMessage(remoteJid, {
-
-                    text: '_Failed to download the ViewOnce media. Please try again._',
-                });
-            }
-
-            // Save the media temporarily
-            const tempFilePath = path.resolve('./temp_view_once_image.mp3');
-
-            fs.writeFileSync(tempFilePath, mediaBuffer);
-
-            // Send the downloaded media
-            await client.sendMessage(bot, {
-
-                audio: { url: tempFilePath },
-                
-            });
-
-            // Clean up the temporary file
-            fs.unlinkSync(tempFilePath);
-
-        }else {
-
-            console.error('No imageMessage found in the quoted message.');
-
-            await client.sendMessage(remoteJid, {
-
-                text: '_No valid imageMessage to modify and send._',
-
-            });
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
         }
-    } catch (error) {
 
-        console.error('Error modifying and sending ViewOnce message:', error);
+        // 3. Préparation du fichier temporaire avec extension correcte
+        const ext = type === 'image' ? '.jpg' : type === 'video' ? '.mp4' : '.mp3';
+        const tempPath = path.resolve(`./save_temp_${Date.now()}${ext}`);
+        fs.writeFileSync(tempPath, buffer);
 
-        await client.sendMessage(remoteJid, {
+        // 4. Envoi sur TON numéro personnel
+        const sender = message.pushName || 'Utilisateur';
+        const caption = `💾 *MONARQUE SAVE SYSTEM*\n\n👤 *De :* ${sender}\n📍 *Source :* ${message.isGroup ? 'Groupe' : 'Privé'}\n📂 *Type :* ${type.toUpperCase()}`;
 
-            text: '_An error occurred while processing the ViewOnce message._',
-            
+        await client.sendMessage(myNumber, {
+            [type]: { url: tempPath },
+            caption: type !== 'audio' ? caption : null
         });
+
+        // 5. Nettoyage et confirmation
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        await client.sendMessage(remoteJid, { 
+            text: stylizedChar({ text: '_✅ Média sauvegardé dans votre chat privé._' }) 
+        }, { quoted: message });
+
+    } catch (error) {
+        console.error('Erreur Save:', error);
+        await client.sendMessage(remoteJid, { text: '_❌ Erreur lors de la sauvegarde._' });
     }
 }
 
-export default viewonce;
+export default save;
