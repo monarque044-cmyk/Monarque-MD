@@ -3,46 +3,37 @@ import makeWASocket, {
     useMultiFileAuthState, 
     DisconnectReason, 
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore // Ajouté pour la stabilité
+    makeCacheableSignalKeyStore // ✅ Indispensable pour la stabilité des clés
 } from '@whiskeysockets/baileys';
-import readline from 'readline';
-import deployAsPremium from '../utils/MomoX.js';
-import configmanager from '../utils/configmanager.js';
 import pino from 'pino';
 import fs from 'fs';
+import configmanager from '../utils/configmanager.js';
+
+// Garde tes autres imports (MomoX, etc.) s'ils sont nécessaires
 
 const data = 'sessionData';
 
-async function getUserNumber() {
-    return new Promise((resolve) => {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-
-        rl.question('📲 Enter your WhatsApp number (with country code, e.g., 243xxxx): ', (number) => {
-            rl.close();
-            resolve(number.trim());
-        });
-    });
-}
-
 async function connectToWhatsapp(handleMessage) {
     const { version, isLatest } = await fetchLatestBaileysVersion();
-    console.log(version);
+    console.log(`🤖 Monarque MD : Baileys v${version}`);
 
     const { state, saveCreds } = await useMultiFileAuthState(data);
 
     const sock = makeWASocket({
         version: version,
-        auth: state,
+        // ✅ Correction : On enveloppe les clés dans makeCacheableSignalKeyStore
+        // Cela évite l'erreur "Cannot find container"
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+        },
         printQRInTerminal: false,
-        syncFullHistory: true,
+        syncFullHistory: false, // Mis à false pour économiser la RAM
         markOnlineOnConnect: true,
         logger: pino({ level: 'silent' }),
-        keepAliveIntervalMs: 10000,
+        browser: ["Monarque MD", "Chrome", "1.0.0"], // Identité du bot
         connectTimeoutMs: 60000,
-        generateHighQualityLinkPreview: true,
+        defaultQueryTimeoutMs: 0,
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -52,98 +43,69 @@ async function connectToWhatsapp(handleMessage) {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const reason = lastDisconnect?.error?.toString() || 'unknown';
-            console.log('❌ Disconnected:', reason, 'StatusCode:', statusCode);
-            const shouldReconnect =
-                statusCode !== DisconnectReason.loggedOut && reason !== 'unknown';
-            if (shouldReconnect) {
-                console.log('🔄 Reconnecting in 5 seconds...');
-                setTimeout(() => connectToWhatsapp(handleMessage), 5000);
-            } else {
-                console.log('🚫 Logged out permanently. Please reauthenticate manually.');
-            }
-        } else if (connection === 'connecting') {
-            console.log('⏳ Connecting...');
-        } else if (connection === 'open') {
-            console.log('✅ WhatsApp connection established!');
-
-            // --- FONCTIONNALITÉ WELCOME MESSAGE ---
-            try {
-                const chatId = '22780828646@s.whatsapp.net'; // ton numéro ou le groupe cible
-                const imagePath = './database/DigixCo.jpg';
-
-                if (!fs.existsSync(imagePath)) {
-                    console.warn('⚠️ Image not found at path:', imagePath);
-                }
-
-                const messageText = `
-╔══════════════════╗
-      *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 MD Connected Successfully* 🚀
-╠══════════════════╣
-> "Always Dare to dream big"
-╚══════════════════╝
-
-*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227*
-                `;
-
-                await sock.sendMessage(chatId, {
-                    image: { url: imagePath },
-                    caption: messageText,
-                    footer: '💻 Powered by Monarque 227',
-                });
-
-                console.log('📩 Welcome message sent successfully!');
-            } catch (err) {
-                console.error('❌ Error sending welcome message:', err);
-            }
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             
+            console.log(`❌ Déconnecté. Raison: ${statusCode}. Reconnexion: ${shouldReconnect}`);
+            
+            if (shouldReconnect) {
+                // On évite les boucles infinies en attendant 5s
+                setTimeout(() => connectToWhatsapp(handleMessage), 5000);
+            }
+        } else if (connection === 'open') {
+            console.log('✅ Connexion établie avec succès !');
 
-            sock.ev.on('messages.upsert', async (msg) => handleMessage(sock, msg));
+            // --- WELCOME MESSAGE ---
+            try {
+                const chatId = '22780828646@s.whatsapp.net';
+                const imagePath = './database/DigixCo.jpg';
+                const messageText = `╔══════════════════╗\n      *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 MD Connecté* 🚀\n╠══════════════════╣\n> "Always Dare to dream big"\n╚══════════════════╝\n\n*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227*`;
+
+                if (fs.existsSync(imagePath)) {
+                    await sock.sendMessage(chatId, { image: { url: imagePath }, caption: messageText });
+                } else {
+                    await sock.sendMessage(chatId, { text: messageText });
+                }
+            } catch (err) {
+                console.error('❌ Erreur message de bienvenue:', err);
+            }
         }
     });
 
-    setTimeout(async () => {
-        if (!state.creds.registered) {
-            console.log('⚠️ Not logged in. Preparing pairing process...');
+    // Écoute des messages
+    sock.ev.on('messages.upsert', async (chatUpdate) => {
+        // On passe 'sock' au handler (qui sera renommé 'monarque' dans tes commandes)
+        handleMessage(sock, chatUpdate);
+    });
+
+    // --- LOGIQUE PAIRING CODE ---
+    if (!state.creds.registered) {
+        const number = "22780828646"; // Utilise un format String
+        console.log(`🔄 Génération du code pour : ${number}`);
+
+        setTimeout(async () => {
             try {
-                const asPremium = true; // await deployAsPremium();
-                const number = 22780828646; // mettez votre numéro WhatsApp 
-
-                if (asPremium === true) {
-                    configmanager.premiums.premiumUser['c'] = { creator: '22780828646' };
-                    configmanager.saveP();
-                    configmanager.premiums.premiumUser['p'] = { premium: number };
-                    configmanager.saveP();
-                }
-
-                console.log(`🔄 Requesting pairing code for ${number}`);
-                const code = await sock.requestPairingCode(number, 'MONARQUE');
-                console.log('📲 Pairing Code:', code);
-                console.log('👉 Enter this code on your WhatsApp app to pair.');
-
-                setTimeout(() => {
-                    configmanager.config.users[number] = {
-                        sudoList: ['22780828646@s.whatsapp.net'], // emplace par ton numéro WhatsApp 
-                        tagAudioPath: 'tag.mp3',
-                        antilink: true,
-                        response: true,
-                        autoreact: false,
-                        prefix: '.',
-                        reaction: '♏',
-                        welcome: false,
-                        record: true,
-                        type: false,
-                        publicMode: false,
-                    };
-                    configmanager.save();
-                }, 2000);
+                // Demande du code
+                let code = await sock.requestPairingCode(number);
+                code = code?.match(/.{1,4}/g)?.join("-") || code;
+                console.log(`📲 TON CODE DE JUMELAGE : ${code}`);
+                
+                // Sauvegarde config utilisateur
+                configmanager.config.users[number] = {
+                    sudoList: [`${number}@s.whatsapp.net`],
+                    prefix: '.',
+                    response: true,
+                    record: true,
+                    welcome: false,
+                };
+                configmanager.save();
             } catch (e) {
-                console.error('❌ Error while requesting pairing code:', e);
+                console.error('❌ Erreur Pairing Code:', e);
             }
-        }
-    }, 5000);
+        }, 5000);
+    }
 
-    return sock;
+    return sock; // Crucial pour ton index.js
 }
 
 export default connectToWhatsapp;
+               
