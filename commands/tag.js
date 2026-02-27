@@ -1,107 +1,104 @@
-import { createWriteStream } from 'fs'
-import { downloadMediaMessage } from "baileys"
-import configmanager from '../utils/configmanager.js'
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
+import configmanager from '../utils/configmanager.js';
+import fs from 'fs';
 
-export async function tagall(client, message) {
-    const remoteJid = message.key.remoteJid
-    if (!remoteJid.includes('@g.us')) return
+// 1. TAG ALL : Mentionne tout le monde avec une liste visible
+export async function tagall(monarque, message) {
+    const chatId = message.key.remoteJid;
+    if (!chatId.endsWith('@g.us')) return;
 
     try {
-        const groupMetadata = await client.groupMetadata(remoteJid)
-        const participants = groupMetadata.participants.map(user => user.id)
-        const text = participants.map(user => `@${user.split('@')[0]}`).join(' \n')
+        const metadata = await monarque.groupMetadata(chatId);
+        const participants = metadata.participants.map(user => user.id);
+        const list = participants.map(user => `@${user.split('@')[0]}`).join('\n');
 
-        await client.sendMessage(remoteJid, {
-            text: `╭─⌈ 🚀 𝑍ᴇʀ⭕✞︎DIAS Broadcast ⌋\n│\n${text}\n│\n╰─⌊ Powered by MD227 ⌉`,
+        await monarque.sendMessage(chatId, {
+            text: `╭─⌈ 🚀 *𝑍ᴇʀ⭕✞︎DIAS Broadcast* ⌋\n│\n${list}\n│\n╰─⌊ *Powered by Monarque-MD* ⌉`,
             mentions: participants
-        })
+        }, { quoted: message });
 
     } catch (error) {
-        console.error("Tagall error:", error)
+        console.error("Tagall error:", error);
     }
 }
 
-export async function tagadmin(client, message) {
-    const remoteJid = message.key.remoteJid
-    const botNumber = client.user.id.split(':')[0] + '@s.whatsapp.net'
-    if (!remoteJid.includes('@g.us')) return
+// 2. TAG ADMIN : Alerte uniquement les admins
+export async function tagadmin(monarque, message) {
+    const chatId = message.key.remoteJid;
+    const botId = monarque.user.id.split(':')[0] + '@s.whatsapp.net';
+    if (!chatId.endsWith('@g.us')) return;
 
     try {
-        const { participants } = await client.groupMetadata(remoteJid)
-        const admins = participants.filter(p => p.admin && p.id !== botNumber).map(p => p.id)
+        const { participants } = await monarque.groupMetadata(chatId);
+        const admins = participants.filter(p => (p.admin === 'admin' || p.admin === 'superadmin') && p.id !== botId).map(p => p.id);
         
-        if (admins.length === 0) return
+        if (admins.length === 0) return;
 
-        const text = `╭─⌈ 🛡️ 𝑍ᴇʀ⭕✞︎DIAS Alert ⌋\n│ Admin Alert\n│\n${admins.map(user => `@${user.split('@')[0]}`).join('\n')}\n│\n╰─⌊ MD227 Control ⌉`
+        const list = admins.map(user => `@${user.split('@')[0]}`).join('\n');
+        const text = `╭─⌈ 🛡️ *𝑍ᴇʀ⭕✞︎DIAS Alert* ⌋\n│ *ADMINS ONLY*\n│\n${list}\n│\n╰─⌊ *MD227 Control* ⌉`;
 
-        await client.sendMessage(remoteJid, { text, mentions: admins })
+        await monarque.sendMessage(chatId, { text, mentions: admins }, { quoted: message });
 
     } catch (error) {
-        console.error("Tagadmin error:", error)
+        console.error("Tagadmin error:", error);
     }
 }
 
-export async function respond(client, message) {
-    const number = client.user.id.split(':')[0]
-    const remoteJid = message.key.remoteJid
-    const messageBody = message.message?.extendedTextMessage?.text || message.message?.conversation || ''
-    if (!configmanager.config.users[number]) return
+// 3. RESPOND : Envoie l'audio si tu es tagué (Correction LID/JID)
+export async function respond(monarque, message) {
+    const myNumber = monarque.user.id.split(':')[0];
+    const chatId = message.key.remoteJid;
+    const msgText = message.body || message.message?.conversation || message.message?.extendedTextMessage?.text || "";
 
-    const tagRespond = configmanager.config.users[number].response
-    if ((!message.key.fromMe) && tagRespond) {
-        const lid = client.user?.lid.split(':')[0]
-        if (messageBody.includes(`@${lid}`)) {
-            await client.sendMessage(remoteJid, {
-                audio: { url: "database/DigiX.mp3" },
-                mimetype: "audio/mp3",
+    if (!configmanager.config.users[myNumber]?.response) return;
+
+    // Vérifie si le message contient une mention de ton numéro
+    if (!message.key.fromMe && msgText.includes(`@${myNumber}`)) {
+        const audioPath = "database/DigiX.mp3";
+        
+        if (fs.existsSync(audioPath)) {
+            await monarque.sendMessage(chatId, {
+                audio: { url: audioPath },
+                mimetype: "audio/mp4", // Plus compatible pour WhatsApp
                 ptt: true,
                 contextInfo: { 
-                    stanzaId: message.key.id,
-                    participant: message.key.participant || lid,
-                    quotedMessage: message.message
+                    externalAdReply: { title: "Monarque MD Response", body: "Propulsé par MD227", mediaType: 1, renderLargerThumbnail: false }
                 }
-            })
+            }, { quoted: message });
         }
     }
 }
 
-export async function tag(client, message) {
-    const remoteJid = message.key.remoteJid
-    if (!remoteJid.includes('@g.us')) return
+// 4. HIDETAG : Mentionne tout le monde sans liste (sur texte ou média cité)
+export async function tag(monarque, message) {
+    const chatId = message.key.remoteJid;
+    if (!chatId.endsWith('@g.us')) return;
 
     try {
-        const groupMetadata = await client.groupMetadata(remoteJid)
-        const participants = groupMetadata.participants.map(user => user.id)
-        const messageBody = message.message?.conversation || message.message?.extendedTextMessage?.text || ""
-        const commandAndArgs = messageBody.slice(1).trim()
-        const parts = commandAndArgs.split(/\s+/)
-        const text = parts.slice(1).join(' ') || 'Digital Crew Alert'
+        const metadata = await monarque.groupMetadata(chatId);
+        const participants = metadata.participants.map(user => user.id);
+        
+        const msgText = message.body || "";
+        const args = msgText.split(' ').slice(1).join(' ') || 'Digital Crew Alert';
 
-        const quotedMessage = message.message?.extendedTextMessage?.contextInfo?.quotedMessage
-        if (quotedMessage) {
-            if (quotedMessage.stickerMessage) {
-                await client.sendMessage(remoteJid, { 
-                    sticker: quotedMessage.stickerMessage, 
-                    mentions: participants 
-                })
-                return
+        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+        if (quoted) {
+            // Si on répond à un sticker, on le renvoie avec les mentions
+            if (quoted.stickerMessage) {
+                return await monarque.sendMessage(chatId, { sticker: quoted.stickerMessage, mentions: participants });
             }
-            const quotedText = quotedMessage.conversation || quotedMessage.extendedTextMessage?.text || ""
-            await client.sendMessage(remoteJid, { 
-                text: `${quotedText}`, 
-                mentions: participants 
-            })
-            return
+            // Si on répond à du texte
+            const quotedText = quoted.conversation || quoted.extendedTextMessage?.text || "Announcement";
+            return await monarque.sendMessage(chatId, { text: quotedText, mentions: participants });
         }
 
-        await client.sendMessage(remoteJid, { 
-            text: `${text}`, 
-            mentions: participants 
-        })
+        // Tag simple
+        await monarque.sendMessage(chatId, { text: args, mentions: participants }, { quoted: message });
 
     } catch (error) {
-        console.error("Tag error:", error)
+        console.error("Tag error:", error);
     }
 }
 
-export default { tagall, tagadmin, respond, tag }
+export default { tagall, tagadmin, respond, tag };
