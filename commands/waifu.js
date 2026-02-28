@@ -1,66 +1,53 @@
 import axios from 'axios';
 
-// Liste des catégories SFW 2025 (Plus sélectives et haute qualité)
 const CATEGORIES = [
-    'waifu', 'maid', 'marin-kitagawa', 'mori-calliope', 'raiden-shogun', 
-    'oppai', 'selfies', 'uniform', 'kamisato-ayaka'
+    'waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 
+    'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 
+    'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'happy', 
+    'wink', 'poke', 'dance', 'cringe'
 ];
 
 const waifu = async (monarque, m, args) => {
+    const chatId = m.key.remoteJid;
     try {
-        const chatId = m.key.remoteJid;
+        // ✅ Correction : On prend le premier argument du tableau
+        let choice = Array.isArray(args) ? args[0] : args;
+        choice = choice?.toLowerCase().trim();
         
-        // Extraction propre de l'argument
-        let choice = (Array.isArray(args) ? args[0] : args)?.toLowerCase();
-        
-        // Si pas de choix ou invalide, on prend 'waifu' par défaut
         if (!choice || !CATEGORIES.includes(choice)) {
             choice = 'waifu';
         }
 
-        // Réaction de chargement stylisée
         await monarque.sendMessage(chatId, { react: { text: "✨", key: m.key } });
 
-        // ✅ API WAIFU.IM 2025 : Version plus stable et rapide
-        const apiUrl = `https://api.waifu.im{choice}&is_nsfw=false`;
+        // ✅ Utilisation de Waifu.pics (Plus stable pour les catégories simples comme neko)
+        const apiUrl = `https://api.waifu.pics{choice}`;
         
-        const res = await axios.get(apiUrl, {
-            timeout: 10000,
-            headers: { 'Accept-Encoding': 'gzip,deflate,compress' }
-        });
+        const res = await axios.get(apiUrl, { timeout: 10000 });
 
-        // Vérification du format de réponse de Waifu.im (objet images[])
-        const imageData = res.data.images?.[0];
-
-        if (!imageData || !imageData.url) {
-            return await monarque.sendMessage(chatId, { 
-                text: `❌ *Désolé*, aucune image trouvée pour : ${choice.toUpperCase()}` 
-            }, { quoted: m });
+        if (!res.data || !res.data.url) {
+            throw new Error("Pas de data");
         }
 
-        // Envoi de l'image avec ton style Monarque 227
         await monarque.sendMessage(chatId, {
-            image: { url: imageData.url },
+            image: { url: res.data.url },
             caption: `🎭 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝔸𝕟𝕚𝕞𝕖* : ${choice.toUpperCase()}\n\n> Always Dare to dream big\n*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`
         }, { quoted: m });
 
-        // Réaction de succès
         await monarque.sendMessage(chatId, { react: { text: "📸", key: m.key } });
 
     } catch (error) {
-        console.error('[WAIFU 2025 ERROR]:', error.message);
-        const chatId = m.key.remoteJid;
-        
-        // Système de secours (Fallback) vers Waifu.pics si Waifu.im est en maintenance
+        console.error('[WAIFU ERROR]:', error.message);
+        // Si l'API principale échoue, on tente un dernier secours fixe
         try {
-            const backup = await axios.get(`https://api.waifu.pics`);
+            const fallback = await axios.get("https://api.waifu.pics");
             await monarque.sendMessage(chatId, {
-                image: { url: backup.data.url },
-                caption: `🎭 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝔸ani𝕞𝕖 (Backup)* : WAIFU`
+                image: { url: fallback.data.url },
+                caption: `🎭 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝔸𝕟𝕚𝕞𝕖 (Secours)*\n\n_L'API demandée était instable._`
             }, { quoted: m });
         } catch (e) {
             await monarque.sendMessage(chatId, { 
-                text: `⚠️ *Erreur Réseau* : Les serveurs d'images sont saturés.` 
+                text: `⚠️ *Erreur Réseau* : Impossible de joindre les APIs d'images.\n_Détails: ${error.message}_` 
             }, { quoted: m });
         }
     }
