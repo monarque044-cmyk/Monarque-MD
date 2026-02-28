@@ -5,8 +5,8 @@ import antidemote from './commands/antidemote.js';
 try {
     console.log('⏳ Initialisation du système Monarque MD...');
 
-    // ✅ Top-level await : plus besoin de s'envelopper dans (async () => { ... })()
-    const monarque = await connectToWhatsapp(handleIncomingMessage);
+    // 1. Connexion au socket Baileys
+    const monarque = await connectToWhatsapp();
 
     if (!monarque || !monarque.ev) {
         throw new Error("L'instance de connexion n'a pas pu être récupérée.");
@@ -14,10 +14,22 @@ try {
 
     console.log('✅ Monarque MD : Connexion établie avec succès !');
 
-    // --- Gestion des événements de groupe ---
+    // --- 2. ÉCOUTEUR DE MESSAGES (LE CŒUR DU BOT) ---
+    monarque.ev.on('messages.upsert', async (chatUpdate) => {
+        try {
+            // DEBUG : Décommente la ligne suivante si tu veux voir les messages bruts dans ta console
+            // console.log("📥 Nouveau message détecté !", JSON.stringify(chatUpdate, null, 2));
+
+            // On envoie le paquet de messages au handler que nous avons corrigé
+            await handleIncomingMessage(monarque, chatUpdate);
+        } catch (err) {
+            console.error("❌ Erreur dans le Handler de Messages :", err);
+        }
+    });
+
+    // --- Gestion des événements de groupe (Anti-demote) ---
     monarque.ev.on('group-participants.update', async (update) => {
         try {
-            // Vérification de sécurité avant l'appel
             if (antidemote && typeof antidemote.onUpdate === 'function') {
                 await antidemote.onUpdate(monarque, update);
             }
@@ -28,5 +40,6 @@ try {
 
 } catch (error) {
     console.error('❌ ÉCHEC DU DÉMARRAGE :', error.message);
-    process.exit(1); // Arrête le processus proprement en cas d'erreur fatale
-}
+    process.exit(1);
+            }
+    
