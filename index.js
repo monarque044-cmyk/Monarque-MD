@@ -6,7 +6,7 @@ async function startMonarque() {
     try {
         console.log('⏳ Initialisation du système Monarque MD...');
 
-        // 1. Connexion au socket Baileys (Appel sans argument car géré ici)
+        // 1. Connexion au socket Baileys
         const monarque = await connectToWhatsapp();
 
         if (!monarque || !monarque.ev) {
@@ -15,11 +15,16 @@ async function startMonarque() {
 
         console.log('✅ Monarque MD : Système prêt et écoute active !');
 
-        // --- 2. ÉCOUTEUR DE MESSAGES (Liaison avec le Handler) ---
+        // --- 2. ÉCOUTEUR DE MESSAGES (Avec Log de Diagnostic) ---
         monarque.ev.on('messages.upsert', async (chatUpdate) => {
             try {
-                // On passe l'instance 'monarque' et l'objet 'chatUpdate'
-                await handleIncomingMessage(monarque, chatUpdate);
+                // ✅ LOG DE TEST : S'affiche à chaque message reçu
+                console.log(`📥 [LOG] Paquet reçu | Type: ${chatUpdate.type} | Nb messages: ${chatUpdate.messages?.length}`);
+
+                // On ne traite que les nouveaux messages ("notify")
+                if (chatUpdate.type === 'notify') {
+                    await handleIncomingMessage(monarque, chatUpdate);
+                }
             } catch (err) {
                 console.error("❌ Erreur dans le Message Handler :", err.message);
             }
@@ -43,7 +48,6 @@ async function startMonarque() {
 
     } catch (error) {
         console.error('❌ ÉCHEC FATAL DU DÉMARRAGE :', error.message);
-        // Tentative de redémarrage après 10 secondes en cas d'échec initial
         setTimeout(startMonarque, 10000);
     }
 }
