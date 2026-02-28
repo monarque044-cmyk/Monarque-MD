@@ -32,7 +32,7 @@ import compliment from '../commands/compliment.js'
 import weather from '../commands/weather.js'
 import goodnight from '../commands/goodnight.js'
 import antidemote from '../commands/antidemote.js'
-import quiz from '..//commands/quiz.js'
+import quiz, {triviaGames} from '../commands/quiz.js'
 import spotify from '../commands/spotify.js'
 import nsfw from '..//commands/nsfw.js'
 import waifu from '../commands/waifu.js'
@@ -120,7 +120,7 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                 case 'quiz': // @cat: fun
                     await react(client, message)
                     const quizAegs = part.slice(1);
-                    await quiz.execute(client, message, quizArgs)
+                    await quiz.execute(client, message, Args)
                     break
 
                 case 'spotify': // @cat group
