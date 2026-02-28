@@ -1,65 +1,63 @@
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
-import { downloadMediaMessage } from "@whiskeysockets/baileys"; // ✅ Correction de l'import
-import fs from "fs";
-import path from "path";
-import stylizedChar from '../utils/fancy.js';
+import { downloadContentFromMessage } from '@whiskeysockets/baileys';
+import { Sticker, createSticker, StickerTypes } from 'waifus-sticker-maker'; // Assure-toi d'avoir cette lib
 
-export async function take(client, message) {
-    const remoteJid = message.key.remoteJid;
+export default {
+    name: 'take',
+    description: 'Change les métadonnées d\'un sticker (Voleur de sticker)',
 
-    try {
-        // 1. Récupération des arguments et du message cité
-        const msgText = message.body || message.message?.conversation || message.message?.extendedTextMessage?.text || "";
-        const args = msgText.split(' ').slice(1);
-        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    async execute(monarque, m, args) {
+        try {
+            const chatId = m.key.remoteJid;
+            
+            // 🔍 1. Vérification de la présence d'un message cité (quoted)
+            const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+            
+            // On cherche le sticker soit dans le message direct, soit dans le message cité
+            const isSticker = m.message?.stickerMessage || quoted?.stickerMessage;
 
-        // Vérification : est-ce un sticker ?
-        if (!quoted || !quoted.stickerMessage) {
-            return client.sendMessage(remoteJid, { 
-                text: stylizedChar("_❌ Réponds à un sticker pour modifier ses métadonnées (Pack/Auteur)_") 
-            }, { quoted: message });
+            if (!isSticker) {
+                return await monarque.sendMessage(chatId, { 
+                    text: "⚠️ *Erreur Monarque* : Réponds à un sticker avec la commande `.take nom|auteur`" 
+                }, { quoted: m });
+            }
+
+            // 📝 2. Préparation des nouvelles infos (Ex: .take Monarque|Bot)
+            const info = args.join(" ").split("|");
+            const packname = info[0] || "𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝕄𝔻";
+            const author = info[1] || "𝟚𝟚𝟟";
+
+            await monarque.sendMessage(chatId, { react: { text: "📥", key: m.key } });
+
+            // 📥 3. Téléchargement du sticker original
+            const stickerMessage = m.message?.stickerMessage || quoted?.stickerMessage;
+            const stream = await downloadContentFromMessage(stickerMessage, 'sticker');
+            let buffer = Buffer.from([]);
+            for await (const chunk of stream) {
+                buffer = Buffer.concat([buffer, chunk]);
+            }
+
+            // 🎭 4. Création du nouveau sticker avec tes infos
+            const newSticker = new Sticker(buffer, {
+                pack: packname,
+                author: author,
+                type: StickerTypes.FULL,
+                categories: ['🤩', '🎉'],
+                id: '12345',
+                quality: 70,
+            });
+
+            const stickerBuffer = await newSticker.toBuffer();
+
+            // 📤 5. Envoi du sticker volé
+            await monarque.sendMessage(chatId, { sticker: stickerBuffer }, { quoted: m });
+            await monarque.sendMessage(chatId, { react: { text: "✅", key: m.key } });
+
+        } catch (error) {
+            console.error('[TAKE ERROR]:', error.message);
+            await monarque.sendMessage(m.key.remoteJid, { 
+                text: "⚠️ *Erreur* : Impossible de modifier ce sticker." 
+            }, { quoted: m });
         }
-
-        // Définition du Nom du Pack et de l'Auteur
-        const packName = args.length > 0 ? args.join(" ") : (message.pushName || "Monarque MD");
-        const authorName = "𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 227"; // Ta signature personnalisée
-
-        await client.sendMessage(remoteJid, { react: { text: "📥", key: message.key } });
-
-        // 2. Téléchargement du sticker original
-        // Utilisation de la méthode correcte pour @whiskeysockets/baileys
-        const buffer = await downloadMediaMessage(
-            message.message.extendedTextMessage.contextInfo,
-            'buffer',
-            {},
-            { logger: console }
-        );
-
-        if (!buffer) {
-            return client.sendMessage(remoteJid, { text: "❌ Erreur lors du téléchargement du sticker." });
-        }
-
-        // 3. Création du nouveau sticker avec les nouvelles métadonnées
-        const sticker = new Sticker(buffer, {
-            pack: packName,
-            author: authorName,
-            type: StickerTypes.FULL,
-            categories: ['🤩', '🚀'],
-            id: '12345',
-            quality: 70, // Qualité augmentée pour 2026
-        });
-
-        // 4. Envoi direct via la méthode intégrée de wa-sticker-formatter
-        const stickerMessage = await sticker.toMessage();
-        await client.sendMessage(remoteJid, stickerMessage, { quoted: message });
-
-        // Réaction de succès
-        await client.sendMessage(remoteJid, { react: { text: "✅", key: message.key } });
-
-    } catch (error) {
-        console.error("❌ Error Take Sticker:", error);
-        await client.sendMessage(remoteJid, { text: `⚠️ Erreur : ${error.message}` });
     }
-}
-
-export default take;
+};
+    
