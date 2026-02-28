@@ -1,5 +1,5 @@
 import axios from 'axios';
-import stylizedChar from '../utils/fancy.js'; // Ton moteur de texte 2026
+import stylizedChar from '../utils/fancy.js';
 
 export default {
     name: 'animenews',
@@ -8,47 +8,53 @@ export default {
     description: '📰 Donne les dernières actualités d’un anime aléatoire',
 
     async execute(monarque, m) {
-        const chatId = m.chat;
+        // Sécurité pour le chatId
+        const chatId = m.chat || m.key.remoteJid;
 
         try {
             // 1. Réaction de recherche
             await monarque.sendMessage(chatId, { react: { text: "🔍", key: m.key } });
 
-            // 2. Récupération d'un anime populaire (Jikan API v4)
-            const topRes = await axios.get('https://api.jikan.moe');
+            // 2. ✅ CORRECTION : Endpoint correct pour le Top Anime
+            // On récupère le top anime pour avoir une liste de départ
+            const topRes = await axios.get('https://api.jikan.moe', { timeout: 10000 });
             const topData = topRes.data?.data;
 
-            if (!topData || topData.length === 0) throw new Error('Pas de données Top Anime');
+            if (!topData || topData.length === 0) {
+                throw new Error('Pas de données Top Anime');
+            }
 
-            // Choix aléatoire parmi le top 15
-            const randomAnime = topData[Math.floor(Math.random() * topData.length)];
+            // Choix aléatoire parmi les 25 premiers du top
+            const randomAnime = topData[Math.floor(Math.random() * Math.min(topData.length, 25))];
             const animeId = randomAnime.mal_id;
-            const animeTitle = randomAnime.title_french || randomAnime.title;
+            const animeTitle = randomAnime.title_french || randomAnime.title || "Anime Inconnu";
 
-            // 3. Récupération des actualités spécifiques à cet anime
-            const newsRes = await axios.get(`https://api.jikan.moe/v4/anime/${animeId}/news`);
+            // 3. Récupération des actualités (News)
+            const newsRes = await axios.get(`https://api.jikan.moe/v4/anime/${animeId}/news`, { timeout: 10000 });
             const newsData = newsRes.data?.data;
 
             if (!newsData || newsData.length === 0) {
                 return monarque.sendMessage(chatId, {
-                    text: stylizedChar(`❌ Aucune actualité récente trouvée pour l'anime : ${animeTitle}.`)
+                    text: `❌ Aucune actualité récente trouvée pour : *${animeTitle}*.`
                 }, { quoted: m });
             }
 
-            // 4. Construction de la liste (Top 3 pour éviter un message trop long)
+            // 4. Construction de la liste (Top 3)
             const newsList = newsData.slice(0, 3).map((item, index) => {
                 const title = item.title || 'Sans titre';
-                const link = item.url || '';
-                const date = item.date ? new Date(item.date).toLocaleDateString('fr-FR') : 'Inconnue';
+                const link = item.url || 'Pas de lien';
+                // Formatage simple de la date
+                const date = item.date ? item.date.split('T')[0] : 'Inconnue';
                 
                 return `🔹 ${index + 1}. *${title}*\n📅 ${date}\n🔗 ${link}`;
             }).join('\n\n');
 
-            // 5. Envoi du message stylisé Monarque
-            const header = stylizedChar(`✨ ACTUALITÉS : ${animeTitle.toUpperCase()} ✨`, 'bold');
-            const footer = stylizedChar(`Powered by Monarque-MD`, 'script');
+            // 5. Mise en forme Monarque
+            // Note: Vérifiez que stylizedChar accepte bien deux arguments (texte, style)
+            const header = `✨ ACTUALITÉS : ${animeTitle.toUpperCase()} ✨`;
+            const footer = `Powered by Monarque-MD`;
 
-            const caption = `${header}\n\n${newsList}\n\n🎬 ${footer}`;
+            const caption = `👑 *${header}*\n\n${newsList}\n\n🎬 _${footer}_`;
 
             await monarque.sendMessage(chatId, { 
                 image: { url: randomAnime.images.jpg.large_image_url }, 
@@ -61,7 +67,7 @@ export default {
         } catch (err) {
             console.error('❌ AnimeNews Error:', err.message);
             await monarque.sendMessage(chatId, { 
-                text: stylizedChar('❌ Service temporairement indisponible. Réessaie plus tard.') 
+                text: `❌ *Erreur Monarque* : Service Jikan indisponible.\n_(Erreur: ${err.message})_` 
             }, { quoted: m });
         }
     }
