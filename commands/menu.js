@@ -15,15 +15,6 @@ function formatUptime(seconds) {
     return `${h}h ${m}m ${s}s`;
 }
 
-function getCategoryIcon(category) {
-    const icons = {
-        utils: "⚙️", media: "📸", group: "👥", bug: "🐞",
-        tags: "🏷️", moderation: "🛡️", owner: "✨", creator: "👑",
-        fun: "🎮", anime: "💮", rpg: "⚔️", settings: "🔧"
-    };
-    return icons[category.trim().toLowerCase()] || "🎯";
-}
-
 export default async function info(client, message) {
     try {
         const remoteJid = message.key.remoteJid;
@@ -33,84 +24,93 @@ export default async function info(client, message) {
         const totalRam = (os.totalmem() / 1024 / 1024).toFixed(1);
         const uptime = formatUptime(process.uptime());
 
-        const botNumber = client.user.id.split(":")[0];
+        const botNumber = client.user.id.split(':');
         const prefix = configs.config.users?.[botNumber]?.prefix || ".";
+        const date = new Date().toLocaleDateString('fr-FR');
 
-        const now = new Date();
-        const date = now.toLocaleDateString('fr-FR');
+        // --- DÉFINITION DES CATÉGORIES ---
+        const categoriesMap = {
+            "🛠️ SYSTÈME": ["uptime", "ping", "menu", "help", "statut", "setprefix", "public", "fancy"],
+            "🎵 MUSIQUE": ["spotify", "sp", "music", "song", "play"],
+            "📸 MÉDIA": ["tiktok", "tt", "img", "sticker", "s", "viewonce", "transcribe"],
+            "🎮 JEUX & FUN": ["quiz", "trivia", "rpg", "profile", "me", "compliment", "goodnight", "weather"],
+            "💮 ANIME": ["waifu", "animenew", "newsanime", "nsfw", "hentai"],
+            "🛡️ MODÉRATION": ["antidemote", "sudo", "delsudo", "take", "setpp", "getpp"]
+        };
 
-        // --- Extraction des commandes optimisée ---
+        // --- EXTRACTION DYNAMIQUE ---
         const handlerPath = path.join(__dirname, "../events/messageHandler.js");
-        let categories = {};
+        let allExtracted = [];
         
         try {
             if (fs.existsSync(handlerPath)) {
                 const handlerCode = fs.readFileSync(handlerPath, "utf-8");
-                // Regex plus souple : capture la commande et la catégorie si elle existe
-                const commandRegex = /case\s+['"](\w+)['"]\s*:(?:\s*\/\/\s*@cat:\s*([^\n\r]+))?/g;
+                const commandRegex = /'(\w+)'\s*:/g;
                 let match;
                 while ((match = commandRegex.exec(handlerCode)) !== null) {
-                    const cmd = match[1];
-                    const catName = match[2] ? match[2].trim() : "AUTRES"; // Si pas de @cat, mis dans AUTRES
-                    if (!categories[catName]) categories[catName] = [];
-                    if (!categories[catName].includes(cmd)) categories[catName].push(cmd);
+                    if (!allExtracted.includes(match[1])) allExtracted.push(match[1]);
                 }
             }
-        } catch (e) {
-            console.error("❌ Erreur lecture messageHandler:", e.message);
-        }
+        } catch (e) { console.error("Erreur extraction:", e); }
 
-        // --- Construction du Menu (Design préservé) ---
+        // --- CONSTRUCTION DU MENU ---
         let menu = `┏━━━〔 ${stylizedChar("Monarque MD", "bold")} 〕━━━┓\n`;
-        menu += `┃ 🔱 ${stylizedChar("Version", "bold")} : 1.0.0\n`;
-        menu += `┃ 👤 ${stylizedChar("User", "bold")} : ${userName}\n`;
-        menu += `┃ ⏱️ ${stylizedChar("Uptime", "bold")} : ${uptime}\n`;
-        menu += `┃ 🚀 ${stylizedChar("RAM", "bold")} : ${usedRam}MB / ${totalRam}MB\n`;
-        menu += `┃ 📅 ${stylizedChar("Date", "bold")} : ${date}\n`;
+        menu += `┃ 🔱 *Version* : 1.0.0\n`;
+        menu += `┃ 👤 *User* : ${userName}\n`;
+        menu += `┃ ⏱️ *Uptime* : ${uptime}\n`;
+        menu += `┃ 🚀 *RAM* : ${usedRam}MB / ${totalRam}MB\n`;
+        menu += `┃ 📅 *Date* : ${date}\n`;
         menu += `┗━━━━━━━━━━━━━━━━━━━━┛\n\n`;
 
-        const sortedCategories = Object.keys(categories).sort();
+        // Tri et affichage par catégories
+        for (const [catName, commandsList] of Object.entries(categoriesMap)) {
+            // On ne garde que les commandes qui existent réellement dans ton handler
+            const available = allExtracted.filter(c => commandsList.includes(c));
+            
+            if (available.length > 0) {
+                menu += `┏━━━ ${catName}\n`;
+                available.sort().forEach(cmd => {
+                    menu += `┃ › ${prefix}${cmd}\n`;
+                });
+                menu += `┗━━━━━━━━━━━━━━━\n\n`;
+            }
+        }
 
-        for (const category of sortedCategories) {
-            const icon = getCategoryIcon(category);
-            menu += `┏━━━ ${icon} *${category.toUpperCase()}*\n`;
-            // Tri des commandes par ordre alphabétique
-            categories[category].sort().forEach(cmd => {
-                menu += `┃ › ${prefix}${cmd}\n`;
-            });
+        // Gestion des commandes "Orphelines" (qui ne sont dans aucune catégorie définie)
+        const classified = Object.values(categoriesMap).flat();
+        const others = allExtracted.filter(c => !classified.includes(c));
+
+        if (others.length > 0) {
+            menu += `┏━━━ 🎯 AUTRES\n`;
+            others.sort().forEach(cmd => menu += `┃ › ${prefix}${cmd}\n`);
             menu += `┗━━━━━━━━━━━━━━━\n\n`;
         }
 
         menu += `> ${stylizedChar("Always Dare to dream big", "script")}\n`;
         menu += `*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
 
-        // --- Envoi avec l'image d'origine sans modification ---
+        // --- ENVOI ---
         const imagePath = "./database/menu.jpg"; 
-
         const sendOptions = {
             caption: menu,
             contextInfo: {
                 externalAdReply: {
                     title: "𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝕊𝕪𝕤𝕥𝕖𝕞",
-                    body: "Connecté avec succès",
+                    body: "Menu Catégorisé",
                     mediaType: 1,
                     renderLargerThumbnail: true,
                     thumbnailUrl: "https://telegra.ph", 
-                    sourceUrl: ""
+                    sourceUrl: "" // ✅ Suppression lien GitHub
                 }
             }
         };
 
-        // Utilisation de fs.readFileSync pour l'image locale pour assurer la compatibilité
         if (fs.existsSync(imagePath)) {
             await client.sendMessage(remoteJid, { image: fs.readFileSync(imagePath), ...sendOptions }, { quoted: message });
         } else {
-            await client.sendMessage(remoteJid, { text: menu }, { quoted: message });
+            await client.sendMessage(remoteJid, { text: menu, contextInfo: sendOptions.contextInfo }, { quoted: message });
         }
 
-    } catch (err) {
-        console.error("❌ Crash dans menu.js:", err);
-        const remoteJid = message.key.remoteJid;
-        await client.sendMessage(remoteJid, { text: "⚠️ Erreur lors de l'affichage du menu." });
-    }
-}
+    } catch (err) { console.error("Erreur menu:", err); }
+                                         }
+                                  
