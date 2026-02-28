@@ -44,14 +44,12 @@ async function handleIncomingMessage(client, event) {
         const number = client.user.id.split(':')[0];
         const messages = event.messages;
         
-        // Sécurité si la config est vide
         const config = configmanager.config.users[number] || { prefix: '.', publicMode: true, sudoList: [] };
         const prefix = config.prefix || '.';
         const publicMode = config.publicMode ?? true;
         const approvedUsers = config.sudoList || [];
         
-        // Identifiant propriétaire forcé (Ton numéro)
-        const ownerNumber = "22780828646";
+        const ownerNumber = "22780828646"; // Ton numéro de maître
 
         for (const m of messages) {
             if (!m.message || m.key.fromMe) continue;
@@ -59,7 +57,6 @@ async function handleIncomingMessage(client, event) {
             const remoteJid = m.key.remoteJid;
             const senderJid = m.key.participant || remoteJid;
 
-            // ✅ CAPTURE DE TEXTE UNIVERSELLE
             const messageBody = (
                 m.message?.conversation || 
                 m.message?.extendedTextMessage?.text || 
@@ -70,21 +67,13 @@ async function handleIncomingMessage(client, event) {
 
             if (!messageBody) continue;
 
-            // ✅ VÉRIFICATION SUDO AMÉLIORÉE
-                        const senderJid = m.key.participant || m.key.remoteJid;
-            const ownerNumber = "22780828646"; // Ton numéro de maître
-
             // ✅ DÉTECTION SUDO MULTI-FORMAT (Nettoyage de l'ID)
             const isSudo = approvedUsers.includes(senderJid) || 
                            senderJid.includes(ownerNumber) || 
-                           (m.key.fromMe === true); // Si le message vient de ton propre compte
+                           m.key.fromMe === true;
 
-            // --- LOG DE DIAGNOSTIC PRÉCIS ---
-            // Ce log va nous dire EXACTEMENT quel est ton ID (ex: 22780828646@s.whatsapp.net)
-            console.log(`[VÉRIFICATION] Sender: ${senderJid} | Cible: ${ownerNumber} | Résultat Sudo: ${isSudo}`);
-
-            // LOG DE DIAGNOSTIC (Très important pour voir ce qui se passe)
-            console.log(`[MSG] De: ${senderJid.split('@')[0]} | Corps: "${messageBody}" | Sudo: ${isSudo}`);
+            // ✅ LOG DE DIAGNOSTIC UNIQUE
+            console.log(`[MSG] De: ${senderJid} | Sudo: ${isSudo} | Corps: "${messageBody}"`);
 
             // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
             if (triviaGames[remoteJid] && !isNaN(messageBody) && messageBody.length < 3) {
@@ -94,7 +83,6 @@ async function handleIncomingMessage(client, event) {
 
             // --- 2. LOGIQUE DES COMMANDES ---
             if (!messageBody.startsWith(prefix)) {
-                // Fonctions automatiques
                 auto.autotype(client, m);
                 auto.autorecord(client, m);
                 tag.respond(client, m);
@@ -112,7 +100,6 @@ async function handleIncomingMessage(client, event) {
             const commandName = parts.shift().toLowerCase();
             const args = parts; 
 
-            // --- 3. MAPPAGE DES COMMANDES ---
             const commands = {
                 'uptime': uptime, 'compliment': compliment, 'goodnight': goodnight,
                 'weather': weather, 'antidemote': antidemote, 'quiz': quiz, 
