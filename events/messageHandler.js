@@ -122,20 +122,20 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                     break
 
                 case 'spotify': // @cat group
-                    case 'spotify': // @cat: download
     await react(client, message);
     const spotifyArgs = parts.slice(1); // On récupère les mots après .spotify
     // On appelle .execute car spotify est un objet exporté par défaut
     await spotify.execute(client, message, spotifyArgs); 
     break
 
-                case 'nsfw': // @cat: anime
+                    case 'nsfw': // @cat: anime
     await react(client, message);
-    // On extrait les arguments (ex: le type de photo nsfw)
-    const nsfwArgs = parts.slice(1); 
-    // ✅ APPEL CORRIGÉ : On utilise .execute
-    await nsfw.execute(client, message, nsfwArgs);
-    break
+    // On récupère le premier mot après la commande (ex: 'hentai')
+    const nsfwChoice = parts[1] || 'waifu'; 
+    // On appelle la fonction de l'objet importé
+    await nsfw.execute(client, message, nsfwChoice);
+    break;
+                    
                     
                 case 'waifu': // @cat: anime
                     await waifu(client, message, parts.slice(1));
