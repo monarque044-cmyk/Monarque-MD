@@ -2,7 +2,7 @@ import axios from 'axios';
 import stylizedChar from '../utils/fancy.js';
 
 export default {
-    name: 'animenews',
+    name: 'animenew',
     alias: ['newsanime', 'animetv'],
     category: 'Anime',
     description: '📰 Donne les dernières actualités d’un anime aléatoire',
