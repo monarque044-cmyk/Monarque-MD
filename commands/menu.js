@@ -29,42 +29,38 @@ export default async function info(client, message) {
         const remoteJid = message.key.remoteJid;
         const userName = message.pushName || "Utilisateur";
 
-        // --- Système & RAM ---
         const usedRam = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
         const totalRam = (os.totalmem() / 1024 / 1024).toFixed(1);
         const uptime = formatUptime(process.uptime());
 
-        // --- Config Bot ---
         const botNumber = client.user.id.split(":")[0];
         const prefix = configs.config.users?.[botNumber]?.prefix || ".";
 
-        // --- Date & Heure ---
         const now = new Date();
-        const day = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"][now.getDay()];
         const date = now.toLocaleDateString('fr-FR');
 
-        // --- Extraction des commandes ---
-        // ⚠️ Vérifie bien que le chemin vers messageHandler.js est exact
+        // --- Extraction des commandes optimisée ---
         const handlerPath = path.join(__dirname, "../events/messageHandler.js");
         let categories = {};
         
         try {
             if (fs.existsSync(handlerPath)) {
                 const handlerCode = fs.readFileSync(handlerPath, "utf-8");
-                const commandRegex = /case\s+['"](\w+)['"]\s*:\s*\/\/\s*@cat:\s*([^\n\r]+)/g;
+                // Regex plus souple : capture la commande et la catégorie si elle existe
+                const commandRegex = /case\s+['"](\w+)['"]\s*:(?:\s*\/\/\s*@cat:\s*([^\n\r]+))?/g;
                 let match;
                 while ((match = commandRegex.exec(handlerCode)) !== null) {
-                    const [_, command, category] = match;
-                    const catName = category.trim();
+                    const cmd = match[1];
+                    const catName = match[2] ? match[2].trim() : "AUTRES"; // Si pas de @cat, mis dans AUTRES
                     if (!categories[catName]) categories[catName] = [];
-                    categories[catName].push(command);
+                    if (!categories[catName].includes(cmd)) categories[catName].push(cmd);
                 }
             }
         } catch (e) {
             console.error("❌ Erreur lecture messageHandler:", e.message);
         }
 
-        // --- Construction du Menu ---
+        // --- Construction du Menu (Design préservé) ---
         let menu = `┏━━━〔 ${stylizedChar("Monarque MD", "bold")} 〕━━━┓\n`;
         menu += `┃ 🔱 ${stylizedChar("Version", "bold")} : 1.0.0\n`;
         menu += `┃ 👤 ${stylizedChar("User", "bold")} : ${userName}\n`;
@@ -73,13 +69,13 @@ export default async function info(client, message) {
         menu += `┃ 📅 ${stylizedChar("Date", "bold")} : ${date}\n`;
         menu += `┗━━━━━━━━━━━━━━━━━━━━┛\n\n`;
 
-        // Tri des catégories par nom
         const sortedCategories = Object.keys(categories).sort();
 
         for (const category of sortedCategories) {
             const icon = getCategoryIcon(category);
             menu += `┏━━━ ${icon} *${category.toUpperCase()}*\n`;
-            categories[category].forEach(cmd => {
+            // Tri des commandes par ordre alphabétique
+            categories[category].sort().forEach(cmd => {
                 menu += `┃ › ${prefix}${cmd}\n`;
             });
             menu += `┗━━━━━━━━━━━━━━━\n\n`;
@@ -88,8 +84,8 @@ export default async function info(client, message) {
         menu += `> ${stylizedChar("Always Dare to dream big", "script")}\n`;
         menu += `*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
 
-        // --- Envoi sécurisé ---
-        const imagePath = "./database/menu.jpg"; // Vérifie que ce fichier existe !
+        // --- Envoi avec l'image d'origine sans modification ---
+        const imagePath = "./database/menu.jpg"; 
 
         const sendOptions = {
             caption: menu,
@@ -99,23 +95,22 @@ export default async function info(client, message) {
                     body: "Connecté avec succès",
                     mediaType: 1,
                     renderLargerThumbnail: true,
-                    thumbnailUrl: "https://telegra.ph", // Image de secours
+                    thumbnailUrl: "https://telegra.ph", 
                     sourceUrl: "https://github.com"
                 }
             }
         };
 
+        // Utilisation de fs.readFileSync pour l'image locale pour assurer la compatibilité
         if (fs.existsSync(imagePath)) {
-            await client.sendMessage(remoteJid, { image: { url: imagePath }, ...sendOptions }, { quoted: message });
+            await client.sendMessage(remoteJid, { image: fs.readFileSync(imagePath), ...sendOptions }, { quoted: message });
         } else {
             await client.sendMessage(remoteJid, { text: menu }, { quoted: message });
         }
 
     } catch (err) {
         console.error("❌ Crash dans menu.js:", err);
-        // Envoi d'un message d'erreur simple pour éviter que l'utilisateur ne reste sans réponse
         const remoteJid = message.key.remoteJid;
         await client.sendMessage(remoteJid, { text: "⚠️ Erreur lors de l'affichage du menu." });
     }
-        }
-            
+}
