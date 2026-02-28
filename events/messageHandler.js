@@ -137,9 +137,7 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
     break;
                     
                 case 'waifu': // @cat: anime
-                    await react(client, message)
-                    const waifuArgs = part.slice(1);
-                    await waifu.execute(client, message, waifuArgs)
+                    await waifu(client, message, parts.slice(1));
                     break
 
                 case 'transcribe': // @cat: group
