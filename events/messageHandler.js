@@ -79,11 +79,20 @@ async function handleIncomingMessage(client, event) {
             console.log(`[MONARQUE] De: ${cleanSender} | Sudo: ${isSudo} | Message: "${messageBody.substring(0, 20)}..."`);
 
             // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
-            if (triviaGames[remoteJid] && !isNaN(messageBody) && messageBody.length < 3) {
-                await quiz.execute(client, m, [messageBody.toLowerCase()]);
-                continue; 
-            }
+            // --- 1. RÉPONSE AUTOMATIQUE QUIZ MONARQUE ---
+// On vérifie si un jeu est en cours dans ce groupe/chat
+if (triviaGames[remoteJid]) {
+    // Si l'utilisateur envoie juste un chiffre (1 à 4) ou la réponse exacte
+    const isNumber = !isNaN(messageBody) && messageBody.length === 1;
+    const game = triviaGames[remoteJid];
 
+    // On redirige vers la fonction execute du quiz pour vérification
+    if (isNumber || messageBody.toLowerCase() === game.correctAnswer.toLowerCase()) {
+        await info.execute(client, m, [messageBody.toLowerCase()]);
+        return; // On arrête ici pour ne pas traiter d'autres commandes
+    }
+}
+            
             // --- 2. LOGIQUE DES COMMANDES ---
             if (!messageBody.startsWith(prefix)) {
                 auto.autotype(client, m);
