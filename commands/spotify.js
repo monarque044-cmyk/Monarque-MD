@@ -8,7 +8,8 @@ export default {
     usage: '.spotify <titre/artiste>',
 
     async execute(monarque, m, args) {
-        const chatId = m.chat;
+        // ✅ Correction de l'extraction du Chat ID et de l'User
+        const chatId = m.chat || m.key.remoteJid;
         const query = args.join(' ').trim();
 
         if (!query) {
@@ -20,32 +21,28 @@ export default {
         try {
             await monarque.sendMessage(chatId, { text: `👑 *Monarque* recherche : _"${query}"_...` }, { quoted: m });
 
-            // Appel à l'API Okatsu
-            const apiUrl = `https://okatsu-rolezapiiz.vercel.app/search/spotify?q=${encodeURIComponent(query)}`;
+            const apiUrl = `https://okatsu-rolezapiiz.vercel.app{encodeURIComponent(query)}`;
             const response = await axios.get(apiUrl, { timeout: 20000 });
 
-            // Sécurité : Vérification de la structure de réponse
             if (!response.data || !response.data.result) {
                 return await monarque.sendMessage(chatId, { text: '❌ Aucun résultat trouvé sur Spotify.' }, { quoted: m });
             }
 
             const track = response.data.result;
-            
-            // On vérifie plusieurs sources possibles pour l'audio selon l'API
-            const audioUrl = track.audio || track.download || track.url;
+            const audioUrl = track.audio || track.download || track.url || track.link;
             const coverUrl = track.thumbnails || track.image || track.cover;
 
             if (!audioUrl) {
-                return await monarque.sendMessage(chatId, { text: '❌ Lien de téléchargement indisponible.' }, { quoted: m });
+                return await monarque.sendMessage(chatId, { text: '❌ Lien de téléchargement indisponible pour ce titre.' }, { quoted: m });
             }
 
             const caption = `🎧 *MONARQUE SPOTIFY* 🎧\n\n` +
                             `🎵 *Titre :* ${track.title || track.name || 'Inconnu'}\n` +
                             `👤 *Artiste :* ${track.artist || 'Inconnu'}\n` +
-                            `⏱️ *Durée :* ${track.duration || 'N/A'}\n` +
-                            `👑 *Statut :* Prêt pour l'écoute`.trim();
+                            `⏱️ *Durée :* ${track.duration || 'N/A'}\n\n` +
+                            `👑 *Statut :* Envoi en cours...`.trim();
 
-            // 1. Envoi de l'image avec les infos
+            // 1. Envoi de l'image (Cover)
             if (coverUrl) {
                 await monarque.sendMessage(chatId, { 
                     image: { url: coverUrl }, 
@@ -55,7 +52,7 @@ export default {
                 await monarque.sendMessage(chatId, { text: caption }, { quoted: m });
             }
 
-            // 2. Envoi de l'audio (Audio standard)
+            // 2. Envoi de l'audio (Format MP3)
             await monarque.sendMessage(chatId, {
                 audio: { url: audioUrl },
                 mimetype: 'audio/mpeg',
@@ -66,7 +63,7 @@ export default {
         } catch (error) {
             console.error('[SPOTIFY ERROR]:', error.message);
             await monarque.sendMessage(chatId, {
-                text: '⚠️ *Erreur Monarque* : Le service est momentanément indisponible.'
+                text: '⚠️ *Erreur Monarque* : Le service est saturé ou le lien est mort.'
             }, { quoted: m });
         }
     }
