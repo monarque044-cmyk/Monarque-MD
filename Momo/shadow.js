@@ -11,11 +11,11 @@ import configmanager from '../utils/configmanager.js';
 
 const data = 'sessionData';
 
-async function connectToWhatsapp(handleMessage) {
+// ✅ On retire handleMessage des arguments pour laisser l'index gérer les événements
+async function connectToWhatsapp() {
     const { version } = await fetchLatestBaileysVersion();
     const { state, saveCreds } = await useMultiFileAuthState(data);
 
-    // ✅ On utilise une Promise pour que l'index.js attende la connexion réelle
     return new Promise(async (resolve) => {
         const sock = makeWASocket({
             version,
@@ -38,13 +38,12 @@ async function connectToWhatsapp(handleMessage) {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 if (statusCode !== DisconnectReason.loggedOut) {
-                    // Reconnexion automatique
-                    setTimeout(() => connectToWhatsapp(handleMessage), 5000);
+                    // Reconnexion sans argument
+                    setTimeout(() => connectToWhatsapp(), 5000);
                 }
             } else if (connection === 'open') {
                 console.log('✅ Monarque MD : Connexion établie !');
                 
-                // ✅ Notification de connexion à soi-même
                 try {
                     const myId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
                     const imagePath = './database/DigixCo.jpg';
@@ -55,21 +54,13 @@ async function connectToWhatsapp(handleMessage) {
                     } else {
                         await sock.sendMessage(myId, { text: messageText });
                     }
-                } catch (err) {
-                    console.error('❌ Erreur notification:', err);
-                }
+                } catch (err) { console.error('❌ Erreur notification:', err); }
 
-                // ✅ Débloque le await dans index.js
-                resolve(sock);
+                resolve(sock); // On renvoie l'instance à l'index.js
             }
         });
 
-        sock.ev.on('messages.upsert', async (chatUpdate) => {
-            // On passe l'instance sock au handler
-            handleMessage(sock, chatUpdate);
-        });
-
-        // --- LOGIQUE PAIRING CODE ---
+        // --- PAIRING CODE ---
         if (!state.creds.registered) {
             const rawNumber = "22780828646"; 
             const cleanNumber = rawNumber.replace(/\D/g, ''); 
@@ -80,18 +71,18 @@ async function connectToWhatsapp(handleMessage) {
                     code = code?.match(/.{1,4}/g)?.join("-") || code;
                     console.log(`\n📲 TON CODE DE JUMELAGE : ${code}\n`);
                     
-                    configmanager.config.users[cleanNumber] = {
-                        sudoList: [`${cleanNumber}@s.whatsapp.net`],
-                        prefix: '.',
-                        response: true,
-                    };
-                    configmanager.save();
-                } catch (e) {
-                    console.error('❌ Erreur Pairing Code:', e);
-                }
+                    if (!configmanager.config.users[cleanNumber]) {
+                        configmanager.config.users[cleanNumber] = {
+                            sudoList: [`${cleanNumber}@s.whatsapp.net`],
+                            prefix: '.',
+                            response: true,
+                        };
+                        configmanager.save();
+                    }
+                } catch (e) { console.error('❌ Erreur Pairing Code:', e); }
             }, 3000);
         }
     });
 }
 
-export default connectToWhatsapp;
+export default connectToWhatsapp; // L'exportation par défaut
