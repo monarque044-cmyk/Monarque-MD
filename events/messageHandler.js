@@ -37,7 +37,7 @@ import nsfw from '../commands/nsfw.js'
 import waifu from '../commands/waifu.js'
 import transcribe from '../commands/transcribe.js'
 import rpg from '../commands/rpg.js'
-import animenew from '../commands/animenew.js'
+import animenew from '../commands/animenew.js' // ✅ Import en minuscules
 
 async function handleIncomingMessage(client, event) {
     try {
@@ -49,15 +49,13 @@ async function handleIncomingMessage(client, event) {
         const publicMode = config.publicMode ?? true;
         const approvedUsers = config.sudoList || [];
         
-        const ownerNumber = "22780828646"; // Ton numéro de maître
+        const ownerNumber = "22780828646"; 
 
         for (const m of messages) {
             if (!m.message) continue;
 
             const remoteJid = m.key.remoteJid;
             const senderJid = m.key.participant || remoteJid;
-
-            // ✅ NETTOYAGE CHIRURGICAL DE L'ID (Garde uniquement les chiffres)
             const cleanSender = senderJid.replace(/\D/g, '');
 
             const messageBody = (
@@ -70,43 +68,33 @@ async function handleIncomingMessage(client, event) {
 
             if (!messageBody) continue;
 
-            // ✅ VÉRIFICATION SUDO ABSOLUE (Compare les chiffres purs)
             const isSudo = approvedUsers.some(u => u.includes(ownerNumber)) || 
                            cleanSender === ownerNumber || 
                            m.key.fromMe === true;
 
-            // ✅ LOG DE DIAGNOSTIC (Très important pour surveiller)
-            console.log(`[MONARQUE] De: ${cleanSender} | Sudo: ${isSudo} | Message: "${messageBody.substring(0, 20)}..."`);
+            // ✅ 1. RÉPONSE AUTOMATIQUE QUIZ MONARQUE
+            if (triviaGames[remoteJid]) {
+                const isNumber = !isNaN(messageBody) && messageBody.length <= 2;
+                const game = triviaGames[remoteJid];
 
-            // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
-            // --- 1. RÉPONSE AUTOMATIQUE QUIZ MONARQUE ---
-// On vérifie si un jeu est en cours dans ce groupe/chat
-if (triviaGames[remoteJid]) {
-    // Si l'utilisateur envoie juste un chiffre (1 à 4) ou la réponse exacte
-    const isNumber = !isNaN(messageBody) && messageBody.length === 1;
-    const game = triviaGames[remoteJid];
-
-    // On redirige vers la fonction execute du quiz pour vérification
-    if (isNumber || messageBody.toLowerCase() === game.correctAnswer.toLowerCase()) {
-        await info.execute(client, m, [messageBody.toLowerCase()]);
-        return; // On arrête ici pour ne pas traiter d'autres commandes
-    }
-}
+                if (isNumber || messageBody.toLowerCase() === game.correctAnswer.toLowerCase()) {
+                    await quiz.execute(client, m, [messageBody.toLowerCase()]); // ✅ Corrigé : quiz.execute
+                    continue; 
+                }
+            }
             
-            // --- 2. LOGIQUE DES COMMANDES ---
+            // ✅ 2. LOGIQUE DES COMMANDES
             if (!messageBody.startsWith(prefix)) {
-                auto.autotype(client, m);
-                auto.autorecord(client, m);
-                tag.respond(client, m);
-                reactions.auto(client, m, config.autoreact, config.emoji);
+                if (auto) {
+                    auto.autotype(client, m);
+                    auto.autorecord(client, m);
+                }
+                if (tag) tag.respond(client, m);
+                if (reactions) reactions.auto(client, m, config.autoreact, config.emoji);
                 continue;
             }
 
-            // Si le bot n'est pas en mode public et que l'user n'est pas sudo, on ignore
-            if (!publicMode && !isSudo) {
-                console.log(`[SÉCURITÉ] Commande ignorée pour ${cleanSender}`);
-                continue;
-            }
+            if (!publicMode && !isSudo) continue;
 
             const parts = messageBody.slice(prefix.length).trim().split(/\s+/);
             const commandName = parts.shift().toLowerCase();
@@ -118,7 +106,7 @@ if (triviaGames[remoteJid]) {
                 'trivia': quiz, 'spotify': spotify, 'sp': spotify, 'music': spotify,
                 'song': spotify, 'nsfw': nsfw, 'hentai': nsfw, 'waifu': waifu,
                 'transcribe': transcribe, 'rpg': rpg, 'profile': rpg, 'me': rpg,
-                'statut': rpg, 'animenew': animeNew, 'newsanime': animeNew,
+                'statut': rpg, 'animenew': animenew, 'newsanime': animenew, // ✅ Tout en minuscules
                 'ping': pingTest, 'menu': info, 'help': info, 'fancy': fancy,
                 'take': take, 'setpp': pp.setpp, 'getpp': pp.getpp, 'sudo': sudo.sudo,
                 'delsudo': sudo.delsudo, 'public': set.isPublic, 'setprefix': set.setprefix,
@@ -147,4 +135,3 @@ if (triviaGames[remoteJid]) {
 }
 
 export default handleIncomingMessage;
-                                        
