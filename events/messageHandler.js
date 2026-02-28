@@ -37,7 +37,7 @@ import nsfw from '../commands/nsfw.js'
 import waifu from '../commands/waifu.js'
 import transcribe from '../commands/transcribe.js'
 import rpg from '../commands/rpg.js'
-import animeNew from '../commands/animeNew.js'
+import animenew from '../commands/animenew.js'
 
 async function handleIncomingMessage(client, event) {
     try {
