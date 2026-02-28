@@ -47,6 +47,7 @@ async function handleIncomingMessage(client, event) {
         const prefix = config.prefix;
         const publicMode = config.publicMode;
         const approvedUsers = config.sudoList;
+        // Correction lid syntaxe
         const lid = client?.user?.lid ? client.user.lid.split(':')[0] + '@lid' : '';
 
         for (const message of messages) {
@@ -59,17 +60,16 @@ async function handleIncomingMessage(client, event) {
                 ''
             ).trim();
 
-            const isSudo = approvedUsers.includes(message.key.participant || remoteJid) || lid.includes(message.key.participant || remoteJid);
+            const isSudo = approvedUsers.includes(message.key.participant || remoteJid) || (lid && lid.includes(message.key.participant || remoteJid));
 
-            // --- 1. RÉPONSE AUTOMATIQUE QUIZ (Sans préfixe) ---
+            // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
             if (triviaGames[remoteJid] && !isNaN(messageBody) && messageBody.length < 3) {
                 await quiz.execute(client, message, [messageBody.toLowerCase()]);
                 continue; 
             }
 
-            // --- 2. LOGIQUE DES COMMANDES (Avec préfixe) ---
+            // --- 2. LOGIQUE DES COMMANDES ---
             if (!messageBody.startsWith(prefix)) {
-                // Fonctions automatiques hors commandes
                 auto.autotype(client, message);
                 auto.autorecord(client, message);
                 tag.respond(client, message);
@@ -83,34 +83,19 @@ async function handleIncomingMessage(client, event) {
             const commandName = parts.shift().toLowerCase();
             const args = parts; 
 
-            // --- 3. MAPPAGE COMPLET DES ALIAS ---
+            // --- 3. MAPPAGE DES COMMANDES ---
             const commands = {
-                'uptime': uptime,
-                'compliment': compliment,
-                'goodnight': goodnight,
-                'weather': weather,
-                'antidemote': antidemote,
-                'quiz': quiz, 'trivia': quiz,
-                'spotify': spotify, 'sp': spotify, 'music': spotify, 'song': spotify,
-                'nsfw': nsfw, 'hentai': nsfw,
-                'waifu': waifu,
-                'transcribe': transcribe,
-                'rpg': rpg, 'profile': rpg, 'me': rpg, 'statut': rpg,
-                'animenew': animeNew, 'newsanime': animeNew,
-                'ping': pingTest,
-                'menu': info, 'help': info,
-                'fancy': fancy,
-                'take': take,
-                'setpp': pp.setpp,
-                'getpp': pp.getpp,
-                'sudo': sudo.sudo,
-                'delsudo': sudo.delsudo,
-                'public': set.isPublic,
-                'setprefix': set.setprefix,
-                'sticker': sticker, 's': sticker,
-                'img': img,
-                'tiktok': tiktok, 'tt': tiktok,
-                'play': play
+                'uptime': uptime, 'compliment': compliment, 'goodnight': goodnight,
+                'weather': weather, 'antidemote': antidemote, 'quiz': quiz, 
+                'trivia': quiz, 'spotify': spotify, 'sp': spotify, 'music': spotify,
+                'song': spotify, 'nsfw': nsfw, 'hentai': nsfw, 'waifu': waifu,
+                'transcribe': transcribe, 'rpg': rpg, 'profile': rpg, 'me': rpg,
+                'statut': rpg, 'animenew': animeNew, 'newsanime': animeNew,
+                'ping': pingTest, 'menu': info, 'help': info, 'fancy': fancy,
+                'take': take, 'setpp': pp.setpp, 'getpp': pp.getpp, 'sudo': sudo.sudo,
+                'delsudo': sudo.delsudo, 'public': set.isPublic, 'setprefix': set.setprefix,
+                'sticker': sticker, 's': sticker, 'img': img, 'tiktok': tiktok, 
+                'tt': tiktok, 'play': play
             };
 
             const command = commands[commandName];
@@ -118,15 +103,10 @@ async function handleIncomingMessage(client, event) {
             if (command) {
                 try {
                     await react(client, message); 
-
-                    // Adaptation intelligente : .execute ou fonction directe
                     if (command.execute && typeof command.execute === 'function') {
                         await command.execute(client, message, args);
                     } else if (typeof command === 'function') {
                         await command(client, message, args);
-                    } else if (typeof command.sudo === 'function' && commandName === 'sudo') {
-                        // Cas spécifique pour l'import de sudo.js
-                        await command.sudo(client, message, approvedUsers);
                     }
                 } catch (error) {
                     console.error(`[EXECUTION ERROR - ${commandName}]:`, error);
@@ -140,3 +120,6 @@ async function handleIncomingMessage(client, event) {
         console.error('[GLOBAL HANDLER ERROR]:', globalError);
     }
 }
+
+// ✅ AJOUT DE L'EXPORTATION MANQUANTE
+export default handleIncomingMessage;
