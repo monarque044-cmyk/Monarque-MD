@@ -40,44 +40,88 @@ import transcribe from '../commands/transcribe.js'
 import rpg from '../commands/rpg.js'
 import animeNew from '../commands/animeNew.js'
 
+// ... (gardez vos imports en haut du fichier)
+
 async function handleIncomingMessage(client, event) {
-    let lid = client?.user?.lid.split(':')[0] + '@lid'
-    const number = client.user.id.split(':')[0]
-    const messages = event.messages
-    const publicMode = configmanager.config.users[number].publicMode
-    const prefix = configmanager.config.users[number].prefix
-const triviaGames = {}; // ✅ Déclaration indispensable pour éviter l'erreur
-    
+    const number = client.user.id.split(':')[0];
+    const messages = event.messages;
+    const config = configmanager.config.users[number];
+    const prefix = config.prefix;
+    const publicMode = config.publicMode;
+    const approvedUsers = config.sudoList;
+
     for (const message of messages) {
-        const messageBody = (message.message?.extendedTextMessage?.text ||
-                           message.message?.conversation || '').toLowerCase()
-        const remoteJid = message.key.remoteJid
-        const approvedUsers = configmanager.config.users[number].sudoList
+        if (!message.message || message.key.fromMe) continue;
 
-        if (!messageBody || !remoteJid) continue
-
-        console.log('📨 Message:', messageBody.substring(0, 50))
+        const messageBody = (
+            message.message?.extendedTextMessage?.text ||
+            message.message?.conversation || 
+            ''
+        ).toLowerCase();
         
-        auto.autotype(client, message)
-        auto.autorecord(client, message)
-        tag.respond(client, message)
+        const remoteJid = message.key.remoteJid;
+        if (!messageBody.startsWith(prefix)) continue;
 
-        reactions.auto(
-            client,
-            message,
-            configmanager.config.users[number].autoreact,
-            configmanager.config.users[number].emoji
-        )
+        // Extraction commande et arguments
+        const args = messageBody.slice(prefix.length).trim().split(/\s+/);
+        const commandName = args.shift().toLowerCase(); // ex: 'spotify'
 
-        if (messageBody.startsWith(prefix) &&
-            (publicMode ||
-             message.key.fromMe ||
-             approvedUsers.includes(message.key.participant || message.key.remoteJid) ||
-             lid.includes(message.key.participant || message.key.remoteJid))) {
+        // Vérification des permissions
+        const isSudo = approvedUsers.includes(message.key.participant || remoteJid);
+        if (!publicMode && !message.key.fromMe && !isSudo) continue;
 
-            const commandAndArgs = messageBody.slice(prefix.length).trim()
-            const parts = commandAndArgs.split(/\s+/)
-            const command = parts[0]
+        // --- HANDLER DE COMMANDES DYNAMIQUE ---
+        // Liste des commandes mappées à leurs imports
+        const commands = {
+            'uptime': uptime,
+            'compliment': compliment,
+            'goodnight': goodnight,
+            'weather': weather,
+            'antidemote': antidemote,
+            'quiz': quiz,
+            'spotify': spotify,
+            'sp': spotify,
+            'nsfw': nsfw,
+            'waifu': waifu,
+            'transcribe': transcribe,
+            'rpg': rpg,
+            'animenew': animeNew,
+            'ping': pingTest,
+            'menu': info,
+            'fancy': fancy,
+            'setpp': pp.setpp,
+            'getpp': pp.getpp,
+            'sudo': sudo.sudo,
+            'delsudo': sudo.delsudo,
+            'public': set.isPublic,
+            'setprefix': set.setprefix
+        };
+
+        const command = commands[commandName];
+
+        if (command) {
+            try {
+                await react(client, message); // Réaction automatique
+
+                // LOGIQUE D'ADAPTATION :
+                // 1. Si la commande est un objet avec .execute (Spotify, NSFW)
+                if (command.execute && typeof command.execute === 'function') {
+                    await command.execute(client, message, args);
+                } 
+                // 2. Si la commande est une fonction simple (Uptime, Ping)
+                else if (typeof command === 'function') {
+                    await command(client, message, args);
+                }
+            } catch (error) {
+                console.error(`[EXECUTION ERROR - ${commandName}]:`, error);
+                await client.sendMessage(remoteJid, { 
+                    text: `❌ *Erreur Monarque* : Impossible d'exécuter la commande \`${commandName}\`.` 
+                }, { quoted: message });
+            }
+        }
+    }
+}
+
 
             // --- Bloc de réponse automatique au Quiz ---
 // On utilise 'remoteJid' pour identifier le groupe et 'messageBody' pour la réponse
