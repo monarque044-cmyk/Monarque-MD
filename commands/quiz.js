@@ -2,11 +2,11 @@ import axios from "axios";
 import he from "he";
 import fs from "fs";
 
-// ✅ Export des jeux en cours pour le handler
 export const triviaGames = {}; 
-const dbPath = "./database.json";
+const dbPath = "./database/quiz_scores.json"; // Dossier database recommandé
 
 // Initialisation de la DB sécurisée
+if (!fs.existsSync("./database")) fs.mkdirSync("./database");
 if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
 
 const getScores = () => {
@@ -24,9 +24,10 @@ const normalizeText = (str) => {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
-// ✅ API Traduction Fixée
+// ✅ API Traduction 2025 Fixée
 async function translateToFrench(text) {
     try {
+        // Utilisation de l'API Google Translate libre
         const res = await axios.get(`https://translate.googleapis.com{encodeURIComponent(text)}`);
         return res.data[0][0][0] || text;
     } catch { return text; }
@@ -37,9 +38,10 @@ export default {
     description: 'Jeu de culture générale avec système de niveaux',
 
     async execute(monarque, m, args) {
-        const chatId = m.chat || m.key.remoteJid;
+        const chatId = m.key.remoteJid;
         const userId = m.key.participant || m.key.remoteJid;
-        const input = args.join(" ").trim().toLowerCase();
+        // On récupère l'input proprement (soit vide pour une nouvelle question, soit la réponse)
+        const input = (Array.isArray(args) ? args.join(" ") : args).trim().toLowerCase();
 
         try {
             // --- CLASSEMENT ---
@@ -49,7 +51,7 @@ export default {
                     .sort((a, b) => (b[1].level || 0) - (a[1].level || 0))
                     .slice(0, 10);
 
-                if (top.length === 0) return monarque.sendMessage(chatId, { text: "🏆 Aucun score enregistré." });
+                if (top.length === 0) return monarque.sendMessage(chatId, { text: "🏆 Aucun score enregistré sur Monarque." });
 
                 let txt = "🏆 *HALL OF FAME - MONARQUE* 🏆\n\n";
                 top.forEach((user, i) => {
@@ -64,21 +66,22 @@ export default {
             if (input === "prestige") {
                 let data = getScores();
                 if (!data[userId] || data[userId].level < 100) {
-                    return monarque.sendMessage(chatId, { text: "❌ Tu dois être niveau *100* pour passer un prestige !" });
+                    return monarque.sendMessage(chatId, { text: "❌ Tu dois être niveau *100* pour passer un prestige Monarque !" });
                 }
                 data[userId].prestige = (data[userId].prestige || 0) + 1;
                 data[userId].level = 1;
                 data[userId].xp = 0;
                 saveScores(data);
-                return monarque.sendMessage(chatId, { text: `✨ *PRESTIGE UP !* @${userId.split('@')[0]} est Rang *${data[userId].prestige}* !`, mentions: [userId] });
+                return monarque.sendMessage(chatId, { text: `✨ *PRESTIGE UP !* @${userId.split('@')[0]} est désormais Rang *${data[userId].prestige}* !`, mentions: [userId] });
             }
 
-            // --- VÉRIFICATION RÉPONSE ---
+            // --- LOGIQUE DE JEU ---
             if (triviaGames[chatId]) {
                 const game = triviaGames[chatId];
                 const selectedIndex = parseInt(input);
                 let userCorrect = false;
 
+                // Vérification par numéro ou par texte
                 if (!isNaN(selectedIndex) && selectedIndex >= 1 && selectedIndex <= game.options.length) {
                     if (game.options[selectedIndex - 1] === game.correctAnswer) userCorrect = true;
                 } else if (normalizeText(input) === normalizeText(game.correctAnswer)) {
@@ -103,21 +106,23 @@ export default {
                     saveScores(data);
                     delete triviaGames[chatId];
                     return monarque.sendMessage(chatId, { text: msg, mentions: [userId] }, { quoted: m });
-                } else if (input.length > 0) {
-                    // On ne répond rien si c'est juste une erreur de frappe, pour éviter le spam
-                    return; 
+                } else if (input.length > 0 && !isNaN(selectedIndex)) {
+                    return monarque.sendMessage(chatId, { text: "❌ Mauvaise réponse ! Réessaye ou attends la prochaine question." });
                 }
+                return; 
             }
 
             // --- NOUVELLE QUESTION ---
-            if (triviaGames[chatId]) return; // Un quiz est déjà en cours
-
             await monarque.sendMessage(chatId, { text: "⏳ _Génération d'une question Monarque..._" });
 
-            // ✅ URL API OpenTDB FIXÉE
-            const qRes = await axios.get("https://opentdb.com");
+            // ✅ URL API OpenTDB FIXÉE (Ajout de amount=1 et type=multiple)
+            const qRes = await axios.get("https://opentdb.com", { timeout: 10000 });
+            
+            if (!qRes.data.results || qRes.data.results.length === 0) throw new Error("Pas de données");
+            
             const qData = qRes.data.results[0];
 
+            // Traduction des éléments
             const questionFr = await translateToFrench(he.decode(qData.question));
             const correctFr = await translateToFrench(he.decode(qData.correct_answer));
             const incorrectsFr = await Promise.all(qData.incorrect_answers.map(ans => translateToFrench(he.decode(ans))));
@@ -127,15 +132,19 @@ export default {
 
             const optionsTxt = options.map((opt, i) => `*${i + 1}️)* ${opt}`).join("\n");
             
-            await monarque.sendMessage(chatId, { 
-                text: `🧠 *QUIZ MONARQUE*\n\n*Question :* ${questionFr}\n\n${optionsTxt}\n\n👉 Réponds par le *numéro* !` 
-            });
+            const quizMsg = `🧠 *QUIZ MONARQUE*\n\n` +
+                          `*Question :* ${questionFr}\n\n` +
+                          `${optionsTxt}\n\n` +
+                          `👉 Réponds par le *numéro* !\n` +
+                          `> Always Dare to dream big`;
+
+            await monarque.sendMessage(chatId, { text: quizMsg }, { quoted: m });
 
         } catch (err) {
-            console.error(err);
+            console.error("[QUIZ ERROR]:", err.message);
             delete triviaGames[chatId];
-            return monarque.sendMessage(chatId, { text: "❌ Erreur API. Réessaie plus tard." });
+            return monarque.sendMessage(chatId, { text: "❌ *Erreur Monarque* : L'API de Quiz est saturée ou indisponible." });
         }
     }
 };
-            
+                
