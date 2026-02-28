@@ -1,3 +1,4 @@
+import { Sticker } from 'waifus-sticker-maker';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { Sticker, createSticker, StickerTypes } from 'waifus-sticker-maker'; // Assure-toi d'avoir cette lib
 
