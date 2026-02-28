@@ -153,7 +153,7 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                     
                 case 'animeNew': // @cat: anime
                     await react(client, message)
-                    await animeNew(client, message)
+                    await animeNew.execute(client, message)
                     break
 
                 case 'take': // @cat: group
