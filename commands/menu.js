@@ -96,7 +96,7 @@ export default async function info(client, message) {
                     mediaType: 1,
                     renderLargerThumbnail: true,
                     thumbnailUrl: "https://telegra.ph", 
-                    sourceUrl: "https://github.com"
+                    sourceUrl: ""
                 }
             }
         };
