@@ -43,19 +43,23 @@ async function handleIncomingMessage(client, event) {
     try {
         const number = client.user.id.split(':')[0];
         const messages = event.messages;
+        
+        // Sécurité si la config est vide
         const config = configmanager.config.users[number] || { prefix: '.', publicMode: true, sudoList: [] };
         const prefix = config.prefix || '.';
-        const publicMode = config.publicMode;
+        const publicMode = config.publicMode ?? true;
         const approvedUsers = config.sudoList || [];
-        const lid = client?.user?.lid ? client.user.lid.split(':')[0] + '@lid' : '';
+        
+        // Identifiant propriétaire forcé (Ton numéro)
+        const ownerNumber = "22780828646";
 
         for (const m of messages) {
             if (!m.message || m.key.fromMe) continue;
 
             const remoteJid = m.key.remoteJid;
-            const sender = m.key.participant || remoteJid;
+            const senderJid = m.key.participant || remoteJid;
 
-            // ✅ CAPTURE DE TEXTE UNIVERSELLE (Texte, Image, Vidéo, Réponse)
+            // ✅ CAPTURE DE TEXTE UNIVERSELLE
             const messageBody = (
                 m.message?.conversation || 
                 m.message?.extendedTextMessage?.text || 
@@ -66,10 +70,13 @@ async function handleIncomingMessage(client, event) {
 
             if (!messageBody) continue;
 
-            const isSudo = approvedUsers.includes(sender) || (lid && lid.includes(sender));
+            // ✅ VÉRIFICATION SUDO AMÉLIORÉE
+            const isSudo = approvedUsers.includes(senderJid) || 
+                           senderJid.includes(ownerNumber) || 
+                           senderJid.includes(number);
 
-            // --- DIAGNOSTIC CONSOLE ---
-            console.log(`[MSG] De: ${sender.split('@')[0]} | Corps: "${messageBody}" | Sudo: ${isSudo}`);
+            // LOG DE DIAGNOSTIC (Très important pour voir ce qui se passe)
+            console.log(`[MSG] De: ${senderJid.split('@')[0]} | Corps: "${messageBody}" | Sudo: ${isSudo}`);
 
             // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
             if (triviaGames[remoteJid] && !isNaN(messageBody) && messageBody.length < 3) {
@@ -79,6 +86,7 @@ async function handleIncomingMessage(client, event) {
 
             // --- 2. LOGIQUE DES COMMANDES ---
             if (!messageBody.startsWith(prefix)) {
+                // Fonctions automatiques
                 auto.autotype(client, m);
                 auto.autorecord(client, m);
                 tag.respond(client, m);
@@ -86,9 +94,9 @@ async function handleIncomingMessage(client, event) {
                 continue;
             }
 
-            // Vérification Permission
+            // Filtrage Permissions
             if (!publicMode && !isSudo) {
-                console.log(`[REFUS] ${sender} n'est pas Sudo et le mode public est OFF`);
+                console.log(`[REFUS] ${senderJid} n'est pas autorisé.`);
                 continue;
             }
 
@@ -96,6 +104,7 @@ async function handleIncomingMessage(client, event) {
             const commandName = parts.shift().toLowerCase();
             const args = parts; 
 
+            // --- 3. MAPPAGE DES COMMANDES ---
             const commands = {
                 'uptime': uptime, 'compliment': compliment, 'goodnight': goodnight,
                 'weather': weather, 'antidemote': antidemote, 'quiz': quiz, 
@@ -122,9 +131,6 @@ async function handleIncomingMessage(client, event) {
                     }
                 } catch (error) {
                     console.error(`[EXECUTION ERROR - ${commandName}]:`, error);
-                    await client.sendMessage(remoteJid, { 
-                        text: `👑 *Monarque Error* : Problème lors de l'exécution de \`${commandName}\`.` 
-                    }, { quoted: m });
                 }
             }
         }
@@ -134,4 +140,4 @@ async function handleIncomingMessage(client, event) {
 }
 
 export default handleIncomingMessage;
-            
+                
