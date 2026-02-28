@@ -2,6 +2,7 @@ import axios from "axios";
 import he from "he";
 import fs from "fs";
 
+// ✅ Export nommé correct pour les modules ESM
 export const triviaGames = {}; 
 const dbPath = "./database.json";
 
@@ -21,121 +22,108 @@ function normalizeText(str) {
 
 async function translateToFrench(text) {
     try {
-        // ✅ URL Google Translate Corrigée
+        // ✅ URL Google Translate Fixée
         const res = await axios.get(`https://translate.googleapis.com{encodeURIComponent(text)}`);
         return res.data[0][0][0] || text;
     } catch { return text; }
 }
 
-// ✅ Transformation en fonction directe pour messageHandler
 const quiz = async (monarque, m, args) => {
-    const chatId = m.key.remoteJid;
-    const userId = m.key.participant || m.key.remoteJid;
-    const input = args.join(" ").trim();
+    try {
+        const chatId = m.key.remoteJid;
+        const userId = m.key.participant || m.key.remoteJid;
+        const input = args.join(" ").trim().toLowerCase();
 
-    // ================== CLASSEMENT (TOP) ==================
-    if (input === "top") {
-        const data = getScores();
-        const top = Object.entries(data)
-            .sort((a, b) => (b[1].level || 0) - (a[1].level || 0))
-            .slice(0, 10);
+        // ================== CLASSEMENT (TOP) ==================
+        if (input === "top") {
+            const data = getScores();
+            const top = Object.entries(data)
+                .sort((a, b) => (b[1].level || 0) - (a[1].level || 0))
+                .slice(0, 10);
+
+            if (top.length === 0) return monarque.sendMessage(chatId, { text: "🏆 Aucun score enregistré." });
+
+            let txt = "🏆 *HALL OF FAME - QUIZ MONARQUE* 🏆\n\n";
+            top.forEach((user, i) => {
+                const jid = user[0];
+                const stats = user[1];
+                let emoji = (i === 0) ? "🥇" : (i === 1) ? "🥈" : (i === 2) ? "🥉" : `${i + 1}.`;
+                let badge = stats.prestige > 0 ? ` [ 🎖️ P.${stats.prestige} ]` : "";
+                txt += `${emoji} @${jid.split("@")[0]}${badge}\n└─ Niveau : *${stats.level || 1}* | XP : *${stats.xp || 0}*\n\n`;
+            });
+
+            return monarque.sendMessage(chatId, { text: txt, mentions: top.map(u => u[0]) });
+        }
 
         // ================== COMMANDE PRESTIGE ==================
-if (input === "prestige") {
-    let data = getScores();
-    const stats = data[userId];
+        if (input === "prestige") {
+            let data = getScores();
+            const stats = data[userId];
 
-    if (!stats || stats.level < 100) {
-        return monarque.sendMessage(chatId, { text: "❌ Tu dois être niveau *100* pour passer un prestige !" });
-    }
+            if (!stats || stats.level < 100) {
+                return monarque.sendMessage(chatId, { text: "❌ Tu dois être niveau *100* pour passer un prestige !" });
+            }
 
-    // On réinitialise le niveau mais on augmente le prestige
-    stats.prestige += 1;
-    stats.level = 1;
-    stats.xp = 0;
-    stats.coins += 1000; // Prime de prestige
+            stats.prestige = (stats.prestige || 0) + 1;
+            stats.level = 1;
+            stats.xp = 0;
+            stats.coins = (stats.coins || 0) + 1000;
 
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-
-    const prestigeTxt = `✨ *ASCENSION DE PRESTIGE* ✨\n\n` +
-                       `@${userId.split('@')[0]} a atteint le Rang de Prestige *${stats.prestige}* !\n` +
-                       `🎖️ Médaille de prestige obtenue.\n` +
-                       `💰 Bonus de +1000 pièces reçu.\n` +
-                       `📈 Vos gains d'XP sont désormais boostés de ${stats.prestige * 10}% !`;
-
-    return monarque.sendMessage(chatId, { text: prestigeTxt, mentions: [userId] });
-}
-
-        if (top.length === 0) return monarque.sendMessage(chatId, { text: "🏆 Aucun score enregistré." });
-
-        let txt = "🏆 *HALL OF FAME - QUIZ MONARQUE* 🏆\n\n";
-        top.forEach((user, i) => {
-            const jid = user[0];
-            const stats = user[1];
-            let emoji = (i === 0) ? "🥇" : (i === 1) ? "🥈" : (i === 2) ? "🥉" : `${i + 1}.`;
-            txt += `${emoji} @${jid.split("@")[0]}\n└─ Niveau : *${stats.level || 1}* | XP : *${stats.xp || 0}*\n\n`;
-        });
-
-        return monarque.sendMessage(chatId, { text: txt, mentions: top.map(u => u[0]) });
-    }
-
-    // ================== RÉPONSE À UNE QUESTION ==================
-    if (input.length > 0) {
-        if (!triviaGames[chatId]) return monarque.sendMessage(chatId, { text: "❌ Pas de quiz en cours. Tape `.quiz`" });
-
-        const game = triviaGames[chatId];
-        const index = parseInt(input, 10);
-        let isCorrect = false;
-
-        if (!isNaN(index) && index >= 1 && index <= game.options.length) {
-            if (normalizeText(game.options[index - 1]) === normalizeText(game.correctAnswer)) isCorrect = true;
-        } else if (normalizeText(input) === normalizeText(game.correctAnswer)) {
-            isCorrect = true;
+            fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+            return monarque.sendMessage(chatId, { 
+                text: `✨ *ASCENSION DE PRESTIGE* ✨\n\n@${userId.split('@')[0]} est désormais Rang *${stats.prestige}* !\n📈 Gains XP boostés de ${stats.prestige * 10}% !`, 
+                mentions: [userId] 
+            });
         }
 
-        // ================== RÉPONSE À UNE QUESTION (AVEC PRESTIGE) ==================
-if (isCorrect) {
-    let data = getScores();
-    if (!data[userId]) data[userId] = { xp: 0, level: 1, prestige: 0, coins: 0 };
+        // ================== RÉPONSE À UNE QUESTION ==================
+        if (input.length > 0 && triviaGames[chatId]) {
+            const game = triviaGames[chatId];
+            const index = parseInt(input, 10);
+            let isCorrect = false;
 
-    // Bonus de Prestige : +10% de gains par rang de prestige
-    const bonusMultiplier = 1 + (data[userId].prestige * 0.1);
-    const xpGagne = Math.round(50 * bonusMultiplier);
-    const coinsGagnes = Math.round(25 * bonusMultiplier);
+            if (!isNaN(index) && index >= 1 && index <= game.options.length) {
+                if (normalizeText(game.options[index - 1]) === normalizeText(game.correctAnswer)) isCorrect = true;
+            } else if (normalizeText(input) === normalizeText(game.correctAnswer)) {
+                isCorrect = true;
+            }
 
-    data[userId].xp += xpGagne;
-    data[userId].coins += coinsGagnes;
+            if (isCorrect) {
+                let data = getScores();
+                if (!data[userId]) data[userId] = { xp: 0, level: 1, prestige: 0, coins: 0 };
 
-    let msgFin = `🎉 *BIEN JOUÉ @${userId.split('@')[0]} !*\n`;
-    msgFin += `✅ Réponse : *${game.correctAnswer}*\n`;
-    msgFin += `💰 +${coinsGagnes} pièces | 🌟 +${xpGagne} XP`;
+                const bonus = 1 + ((data[userId].prestige || 0) * 0.1);
+                const xpGagne = Math.round(50 * bonus);
+                const coinsGagnes = Math.round(25 * bonus);
 
-    // --- LOGIQUE LEVEL UP ---
-    const xpNeeded = data[userId].level * 150;
-    if (data[userId].xp >= xpNeeded) {
-        data[userId].level += 1;
-        data[userId].xp = 0;
-        msgFin += `\n\n🎊 *LEVEL UP !* Tu es niveau *${data[userId].level}* !`;
+                data[userId].xp += xpGagne;
+                data[userId].coins = (data[userId].coins || 0) + coinsGagnes;
 
-        // --- CONDITION DE PRESTIGE (Niveau 100) ---
-        if (data[userId].level >= 100) {
-            msgFin += `\n\n✨ *INCROYABLE !* Tu as atteint le niveau 100 !\n👉 Tape *.quiz prestige* pour passer au rang supérieur !`;
+                let msgFin = `🎉 *BIEN JOUÉ @${userId.split('@')[0]} !*\n✅ Réponse : *${game.correctAnswer}*\n💰 +${coinsGagnes} pièces | 🌟 +${xpGagne} XP`;
+
+                const xpNeeded = data[userId].level * 150;
+                if (data[userId].xp >= xpNeeded) {
+                    data[userId].level += 1;
+                    data[userId].xp = 0;
+                    msgFin += `\n\n🎊 *LEVEL UP !* Niveau *${data[userId].level}* !`;
+                    if (data[userId].level >= 100) msgFin += `\n👉 Tape *.quiz prestige* !`;
+                }
+
+                fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+                await monarque.sendMessage(chatId, { text: msgFin, mentions: [userId] }, { quoted: m });
+                delete triviaGames[chatId];
+                return;
+            } else {
+                return monarque.sendMessage(chatId, { text: "❌ Mauvaise réponse ! Réessaie." });
+            }
         }
-    }
 
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-    await monarque.sendMessage(chatId, { text: msgFin, mentions: [userId] }, { quoted: m });
-    delete triviaGames[chatId];
-    return;
-}
-        
+        // ================== NOUVELLE QUESTION ==================
+        if (triviaGames[chatId]) return monarque.sendMessage(chatId, { text: "⚠️ Un quiz est déjà lancé !" });
 
-    // ================== NOUVELLE QUESTION ==================
-    if (triviaGames[chatId]) return monarque.sendMessage(chatId, { text: "⚠️ Un quiz est déjà lancé !" });
-
-    try {
         await monarque.sendMessage(chatId, { text: "🔍 _Génération d'un quiz..._" });
-        // ✅ URL API OpenTDB Corrigée
+        
+        // ✅ URL API OpenTDB Fixée
         const response = await axios.get("https://opentdb.com");
         const qData = response.data.results[0];
 
@@ -148,16 +136,18 @@ if (isCorrect) {
 
         const optionsText = options.map((opt, i) => `*${i + 1}️)* ${opt}`).join("\n");
         await monarque.sendMessage(chatId, { 
-            text: `🧠 *QUIZ MONARQUE*\n\n*Question :* ${questionFr}\n\n${optionsText}\n\n👉 Réponds : \`.quiz <numéro>\`\n🏆 Top : \`.quiz top\`` 
+            text: `🧠 *QUIZ MONARQUE*\n\n*Question :* ${questionFr}\n\n${optionsText}\n\n👉 Réponds le numéro !\n🏆 Top : \`.quiz top\`` 
         });
+
     } catch (err) {
-        console.error(err);
+        console.error("Erreur Quiz:", err);
+        const chatId = m.key.remoteJid;
         await monarque.sendMessage(chatId, { text: "❌ Erreur de génération. Réessaie." });
     }
 };
 
-// ✅ Pour la détection automatique des réponses dans messageHandler
+// ✅ Liaison pour messageHandler
 quiz.execute = quiz; 
 
 export default quiz;
-    
+                    
