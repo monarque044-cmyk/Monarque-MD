@@ -71,9 +71,17 @@ async function handleIncomingMessage(client, event) {
             if (!messageBody) continue;
 
             // ✅ VÉRIFICATION SUDO AMÉLIORÉE
+                        const senderJid = m.key.participant || m.key.remoteJid;
+            const ownerNumber = "22780828646"; // Ton numéro de maître
+
+            // ✅ DÉTECTION SUDO MULTI-FORMAT (Nettoyage de l'ID)
             const isSudo = approvedUsers.includes(senderJid) || 
                            senderJid.includes(ownerNumber) || 
-                           senderJid.includes(number);
+                           (m.key.fromMe === true); // Si le message vient de ton propre compte
+
+            // --- LOG DE DIAGNOSTIC PRÉCIS ---
+            // Ce log va nous dire EXACTEMENT quel est ton ID (ex: 22780828646@s.whatsapp.net)
+            console.log(`[VÉRIFICATION] Sender: ${senderJid} | Cible: ${ownerNumber} | Résultat Sudo: ${isSudo}`);
 
             // LOG DE DIAGNOSTIC (Très important pour voir ce qui se passe)
             console.log(`[MSG] De: ${senderJid.split('@')[0]} | Corps: "${messageBody}" | Sudo: ${isSudo}`);
