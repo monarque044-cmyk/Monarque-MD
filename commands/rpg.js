@@ -2,57 +2,78 @@ import fs from 'fs';
 
 const dbPath = './database.json';
 
-// Fonction pour récupérer les données
-function getPlayerData(userId) {
+// Centralisation de la gestion des données pour éviter les conflits
+const getAllData = () => {
     if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
-    const data = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-    
-    // Initialisation si l'utilisateur est nouveau
-    if (!data[userId]) {
-        data[userId] = { xp: 0, level: 1, prestige: 0, coins: 100 };
-        fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-    }
-    return data[userId];
-}
+    try {
+        return JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+    } catch { return {}; }
+};
+
+const saveAllData = (data) => {
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+};
 
 export default {
-    name: 'statut',
-    alias: ['profile', 'me', 'rpg'],
+    name: 'rpg',
+    alias: ['statut', 'profile', 'me', 'stats'],
     category: 'RPG',
-    description: 'Affiche ton profil de combattant Monarque',
+    description: 'Affiche ton profil de combattant Monarque et tes statistiques',
 
-    async execute(monarque, m) {
-        const userId = m.sender;
-        const stats = getPlayerData(userId);
+    async execute(monarque, m, args) {
+        const chatId = m.chat || m.key.remoteJid;
+        const userId = m.sender || m.key.participant || m.key.remoteJid;
 
-        // Calcul du niveau (Exemple : 100 XP par niveau)
-        const nextLevelXp = stats.level * 150;
-        const progress = Math.floor((stats.xp / nextLevelXp) * 10);
-        const progressBar = '▰'.repeat(progress) + '▱'.repeat(10 - progress);
+        // Lecture sécurisée
+        const allData = getAllData();
 
-        // Déterminer le titre selon le niveau
-        let rank = 'Paysan';
-        if (stats.level >= 5) rank = 'Soldat';
-        if (stats.level >= 10) rank = 'Chevalier';
-        if (stats.level >= 20) rank = 'Commandant';
-        if (stats.level >= 50) rank = '👑 L\'Érudit Suprême';
+        // Initialisation si l'utilisateur est inconnu (Partage la DB avec le Quiz)
+        if (!allData[userId]) {
+            allData[userId] = { 
+                xp: 0, 
+                level: 1, 
+                prestige: 0, 
+                coins: 100,
+                lastHunt: 0 // Pour de futures commandes de chasse
+            };
+            saveAllData(allData);
+        }
+
+        const stats = allData[userId];
+
+        // --- Logique du profil ---
+        const xpNeeded = (stats.level || 1) * 200; // Aligné sur le quiz
+        const progressPercent = Math.min(Math.floor(((stats.xp || 0) / xpNeeded) * 10), 10);
+        const progressBar = '▰'.repeat(progressPercent) + '▱'.repeat(10 - progressPercent);
+
+        // Détermination du Rang Monarque
+        let rank = '🛡️ Novice';
+        if (stats.level >= 5) rank = '🗡️ Soldat';
+        if (stats.level >= 15) rank = '⚔️ Chevalier';
+        if (stats.level >= 30) rank = '🚩 Commandant';
+        if (stats.level >= 50) rank = '🎖️ Général';
+        if (stats.level >= 80) rank = '👑 Érudit Suprême';
+        if (stats.prestige > 0) rank = `🌟 Divinité (P.${stats.prestige})`;
 
         const statusText = `
-✨ *PROFIL MONARQUE-RPG* ✨
+✨ *MONARQUE RPG : PROFIL* ✨
+
 👤 *Guerrier :* @${userId.split('@')[0]}
 🎖️ *Rang :* ${rank}
 
-📊 *Niveau :* ${stats.level}
-🌟 *Prestige :* ${stats.prestige}
-💰 *Pièces :* ${stats.coins}
+📊 *Statistiques :*
+├─ 🌟 *Niveau :* ${stats.level || 1}
+├─ 🎖️ *Prestige :* ${stats.prestige || 0}
+└─ 💰 *Fortune :* ${stats.coins || 0} pièces
 
-📈 *Expérience :* [ ${stats.xp} / ${nextLevelXp} ]
+📈 *Progression XP :*
+[ ${stats.xp || 0} / ${xpNeeded} ]
 ${progressBar}
 
-_Répondez aux quiz ou gagnez des duels pour monter en niveau !_
+> _Astuce : Gagnez des quiz pour monter de niveau et débloquer des prestiges !_
         `.trim();
 
-        await monarque.sendMessage(m.chat, { 
+        await monarque.sendMessage(chatId, { 
             text: statusText, 
             mentions: [userId] 
         }, { quoted: m });
