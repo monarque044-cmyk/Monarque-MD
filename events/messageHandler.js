@@ -43,47 +43,59 @@ async function handleIncomingMessage(client, event) {
     try {
         const number = client.user.id.split(':')[0];
         const messages = event.messages;
-        const config = configmanager.config.users[number];
-        const prefix = config.prefix;
+        const config = configmanager.config.users[number] || { prefix: '.', publicMode: true, sudoList: [] };
+        const prefix = config.prefix || '.';
         const publicMode = config.publicMode;
-        const approvedUsers = config.sudoList;
-        // Correction lid syntaxe
+        const approvedUsers = config.sudoList || [];
         const lid = client?.user?.lid ? client.user.lid.split(':')[0] + '@lid' : '';
 
-        for (const message of messages) {
-            if (!message.message || message.key.fromMe) continue;
+        for (const m of messages) {
+            if (!m.message || m.key.fromMe) continue;
 
-            const remoteJid = message.key.remoteJid;
+            const remoteJid = m.key.remoteJid;
+            const sender = m.key.participant || remoteJid;
+
+            // ✅ CAPTURE DE TEXTE UNIVERSELLE (Texte, Image, Vidéo, Réponse)
             const messageBody = (
-                message.message?.extendedTextMessage?.text ||
-                message.message?.conversation || 
+                m.message?.conversation || 
+                m.message?.extendedTextMessage?.text || 
+                m.message?.imageMessage?.caption || 
+                m.message?.videoMessage?.caption || 
                 ''
             ).trim();
 
-            const isSudo = approvedUsers.includes(message.key.participant || remoteJid) || (lid && lid.includes(message.key.participant || remoteJid));
+            if (!messageBody) continue;
+
+            const isSudo = approvedUsers.includes(sender) || (lid && lid.includes(sender));
+
+            // --- DIAGNOSTIC CONSOLE ---
+            console.log(`[MSG] De: ${sender.split('@')[0]} | Corps: "${messageBody}" | Sudo: ${isSudo}`);
 
             // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
             if (triviaGames[remoteJid] && !isNaN(messageBody) && messageBody.length < 3) {
-                await quiz.execute(client, message, [messageBody.toLowerCase()]);
+                await quiz.execute(client, m, [messageBody.toLowerCase()]);
                 continue; 
             }
 
             // --- 2. LOGIQUE DES COMMANDES ---
             if (!messageBody.startsWith(prefix)) {
-                auto.autotype(client, message);
-                auto.autorecord(client, message);
-                tag.respond(client, message);
-                reactions.auto(client, message, config.autoreact, config.emoji);
+                auto.autotype(client, m);
+                auto.autorecord(client, m);
+                tag.respond(client, m);
+                reactions.auto(client, m, config.autoreact, config.emoji);
                 continue;
             }
 
-            if (!publicMode && !message.key.fromMe && !isSudo) continue;
+            // Vérification Permission
+            if (!publicMode && !isSudo) {
+                console.log(`[REFUS] ${sender} n'est pas Sudo et le mode public est OFF`);
+                continue;
+            }
 
             const parts = messageBody.slice(prefix.length).trim().split(/\s+/);
             const commandName = parts.shift().toLowerCase();
             const args = parts; 
 
-            // --- 3. MAPPAGE DES COMMANDES ---
             const commands = {
                 'uptime': uptime, 'compliment': compliment, 'goodnight': goodnight,
                 'weather': weather, 'antidemote': antidemote, 'quiz': quiz, 
@@ -102,17 +114,17 @@ async function handleIncomingMessage(client, event) {
 
             if (command) {
                 try {
-                    await react(client, message); 
+                    await react(client, m); 
                     if (command.execute && typeof command.execute === 'function') {
-                        await command.execute(client, message, args);
+                        await command.execute(client, m, args);
                     } else if (typeof command === 'function') {
-                        await command(client, message, args);
+                        await command(client, m, args);
                     }
                 } catch (error) {
                     console.error(`[EXECUTION ERROR - ${commandName}]:`, error);
                     await client.sendMessage(remoteJid, { 
                         text: `👑 *Monarque Error* : Problème lors de l'exécution de \`${commandName}\`.` 
-                    }, { quoted: message });
+                    }, { quoted: m });
                 }
             }
         }
@@ -121,5 +133,5 @@ async function handleIncomingMessage(client, event) {
     }
 }
 
-// ✅ AJOUT DE L'EXPORTATION MANQUANTE
 export default handleIncomingMessage;
+            
