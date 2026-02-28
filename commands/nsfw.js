@@ -1,46 +1,63 @@
 import axios from 'axios';
 
-const NSFW_CATEGORIES = ['waifu', 'neko', 'trap', 'blowjob', 'hentai', 'milf', 'oral', 'paizuri', 'ecchi', 'ero'];
+// Liste des catégories 2025 mise à jour (Images & GIFs)
+const NSFW_CATEGORIES = [
+    'hentai', 'ass', 'pgif', 'gonewild', 'thigh', 'pussy', 
+    'paizuri', 'tentacle', 'boobs', 'hboobs', 'yaoi', 'yuri'
+];
 
 export default {
     name: 'nsfw',
-    description: 'Affiche du contenu adulte',
+    description: 'Affiche du contenu adulte premium 2025',
     
     async execute(monarque, m, args) {
-        // Correction du chatId pour éviter les crashs
-        const chatId = m.chat || m.key?.remoteJid;
+        const chatId = m.key.remoteJid;
         
-        // On récupère le premier argument (le choix de la catégorie)
+        // On récupère le choix ou 'hentai' par défaut
         let choice = args[0]?.toLowerCase();
         
         if (!choice || !NSFW_CATEGORIES.includes(choice)) {
-            choice = 'waifu'; 
+            const list = NSFW_CATEGORIES.join(', ');
+            return await monarque.sendMessage(chatId, { 
+                text: `🔞 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 ℕ𝕊𝔽𝕎*\n\nCatégories valides :\n_${list}_` 
+            }, { quoted: m });
         }
 
         try {
-            // ✅ URL FIXÉE : Ajout de /nsfw/ et correction de la syntaxe ${choice}
-            const apiUrl = `https://api.waifu.pics{choice}`;
+            // ✅ Utilisation de l'API NekoBot (Plus rapide et riche en 2025)
+            const apiUrl = `https://nekobot.xyz{choice}`;
             
             const res = await axios.get(apiUrl, {
-                timeout: 15000,
-                headers: { 'User-Agent': 'Mozilla/5.0' }
+                timeout: 10000,
+                headers: { 'User-Agent': 'MonarqueBot/2.0' }
             });
 
-            if (!res?.data?.url) {
-                return await monarque.sendMessage(chatId, { text: '❌ Impossible de récupérer l\'image.' }, { quoted: m });
+            if (!res?.data?.message) {
+                throw new Error("Format de réponse invalide");
             }
 
-            // Envoi du contenu
+            // Envoi du média (Image ou GIF)
             await monarque.sendMessage(chatId, {
-                image: { url: res.data.url },
-                caption: `🔞 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 ℕ𝕊𝔽𝕎* : ${choice.toUpperCase()}\n\n> *_Always Dare to dream big_*`
+                image: { url: res.data.message },
+                caption: `🔞 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 ℕ𝕊𝔽𝕎* : ${choice.toUpperCase()}\n\n> Always Dare to dream big`
             }, { quoted: m });
 
         } catch (error) {
-            console.error('[NSFW ERROR]:', error.message);
-            await monarque.sendMessage(chatId, { 
-                text: `❌ *Erreur Monarque* : Impossible de joindre l'API.\n_Détails: ${error.message}_` 
-            }, { quoted: m });
+            console.error('[NSFW 2025 ERROR]:', error.message);
+            
+            // Système de secours (Fallback) vers Waifu.pics si NekoBot est saturé
+            try {
+                const backupUrl = `https://api.waifu.pics{choice === 'hentai' ? 'hentai' : 'waifu'}`;
+                const backupRes = await axios.get(backupUrl);
+                await monarque.sendMessage(chatId, {
+                    image: { url: backupRes.data.url },
+                    caption: `🔞 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 ℕ𝕊𝔽𝕎 (Backup)* : ${choice.toUpperCase()}`
+                }, { quoted: m });
+            } catch (e) {
+                await monarque.sendMessage(chatId, { 
+                    text: `❌ *Erreur Réseau* : Les serveurs adultes sont saturés.\n_Réessaye dans quelques secondes._` 
+                }, { quoted: m });
+            }
         }
     }
 };
