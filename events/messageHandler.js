@@ -131,9 +131,9 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                     case 'nsfw': // @cat: anime
     await react(client, message);
     // On récupère le premier mot après la commande (ex: 'hentai')
-    const nsfwChoice = parts[1] || 'waifu'; 
+    const nsfwArgs = parts.slice(1).join(' '); 
     // On appelle la fonction de l'objet importé
-    await nsfw.execute(client, message, nsfwChoice);
+    await nsfw.execute(client, message, nsfwArgs);
     break;
                     
                     
