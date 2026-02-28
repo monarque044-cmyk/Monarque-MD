@@ -105,13 +105,11 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
                     break
 
                     case 'weather': // @cat: group
-    await react(client, message);
-    // On récupère les arguments (la ville) après la commande
-    const weatherArgs = parts.slice(1); 
-    // ✅ APPEL CORRIGÉ : On utilise .execute
-    await weather.execute(client, message, weatherArgs);
-    break
-                    
+                    await react(client, message);
+                    const weatherArgs = parts.slice(1); 
+                    await weather(client, message, weatherArgs); // ✅ Simple et efficace
+                    break;
+                                
                 case 'antidemote': // @cat: group
                     await react(client, message)
                     await antidemote(client, message)
