@@ -52,10 +52,13 @@ async function handleIncomingMessage(client, event) {
         const ownerNumber = "22780828646"; // Ton numéro de maître
 
         for (const m of messages) {
-            if (!m.message || m.key.fromMe) continue;
+            if (!m.message) continue;
 
             const remoteJid = m.key.remoteJid;
             const senderJid = m.key.participant || remoteJid;
+
+            // ✅ NETTOYAGE CHIRURGICAL DE L'ID (Garde uniquement les chiffres)
+            const cleanSender = senderJid.replace(/\D/g, '');
 
             const messageBody = (
                 m.message?.conversation || 
@@ -67,13 +70,13 @@ async function handleIncomingMessage(client, event) {
 
             if (!messageBody) continue;
 
-            // ✅ DÉTECTION SUDO MULTI-FORMAT (Nettoyage de l'ID)
-            const isSudo = approvedUsers.includes(senderJid) || 
-                           senderJid.includes(ownerNumber) || 
+            // ✅ VÉRIFICATION SUDO ABSOLUE (Compare les chiffres purs)
+            const isSudo = approvedUsers.some(u => u.includes(ownerNumber)) || 
+                           cleanSender === ownerNumber || 
                            m.key.fromMe === true;
 
-            // ✅ LOG DE DIAGNOSTIC UNIQUE
-            console.log(`[MSG] De: ${senderJid} | Sudo: ${isSudo} | Corps: "${messageBody}"`);
+            // ✅ LOG DE DIAGNOSTIC (Très important pour surveiller)
+            console.log(`[MONARQUE] De: ${cleanSender} | Sudo: ${isSudo} | Message: "${messageBody.substring(0, 20)}..."`);
 
             // --- 1. RÉPONSE AUTOMATIQUE QUIZ ---
             if (triviaGames[remoteJid] && !isNaN(messageBody) && messageBody.length < 3) {
@@ -90,9 +93,9 @@ async function handleIncomingMessage(client, event) {
                 continue;
             }
 
-            // Filtrage Permissions
+            // Si le bot n'est pas en mode public et que l'user n'est pas sudo, on ignore
             if (!publicMode && !isSudo) {
-                console.log(`[REFUS] ${senderJid} n'est pas autorisé.`);
+                console.log(`[SÉCURITÉ] Commande ignorée pour ${cleanSender}`);
                 continue;
             }
 
@@ -125,7 +128,7 @@ async function handleIncomingMessage(client, event) {
                         await command(client, m, args);
                     }
                 } catch (error) {
-                    console.error(`[EXECUTION ERROR - ${commandName}]:`, error);
+                    console.error(`[COMMAND ERROR]:`, error);
                 }
             }
         }
@@ -135,4 +138,4 @@ async function handleIncomingMessage(client, event) {
 }
 
 export default handleIncomingMessage;
-                
+                                        
