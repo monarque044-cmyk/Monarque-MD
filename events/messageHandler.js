@@ -117,14 +117,17 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
 
                 case 'quiz': // @cat: fun
                     await react(client, message)
-                    const quizAegs = part.slice(1);
+                    const quizArgs = parts.slice(1);
                     await quiz.execute(client, message, Args)
                     break
 
                 case 'spotify': // @cat group
-                    await react(client, message)
-                    await spotify(client, message)
-                    break
+                    case 'spotify': // @cat: download
+    await react(client, message);
+    const spotifyArgs = parts.slice(1); // On récupère les mots après .spotify
+    // On appelle .execute car spotify est un objet exporté par défaut
+    await spotify.execute(client, message, spotifyArgs); 
+    break
 
                 case 'nsfw': // @cat: anime
     await react(client, message);
@@ -132,7 +135,7 @@ if (triviaGames[remoteJid] && !isNaN(messageBody.trim()) && messageBody.trim().l
     const nsfwArgs = parts.slice(1); 
     // ✅ APPEL CORRIGÉ : On utilise .execute
     await nsfw.execute(client, message, nsfwArgs);
-    break;
+    break
                     
                 case 'waifu': // @cat: anime
                     await waifu(client, message, parts.slice(1));
