@@ -1,6 +1,7 @@
 import configmanager from "../utils/configmanager.js";
 // On importera nos commandes ici au fur et à mesure
 import menu from "../commands/menu.js";
+import quiz, { triviaGames } from "../commands/quiz.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -19,6 +20,24 @@ export default async function handleIncomingMessage(monarque, chatUpdate) {
             m.message?.videoMessage?.caption || 
             ''
         ).trim();
+
+// ... (dans handleIncomingMessage) ...
+// ✅ DÉTECTION DES RÉPONSES AU QUIZ
+if (triviaGames[remoteJid]) {
+    const game = triviaGames[remoteJid];
+    const userChoice = parseInt(messageBody);
+
+    if (!isNaN(userChoice) && userChoice >= 1 && userChoice <= 4) {
+        if (userChoice === game.correctIndex) {
+            await monarque.sendMessage(remoteJid, { text: `✅ *BRAVO !*\nLa réponse était bien : *${game.correctAnswer}*\n🌟 +50 XP` });
+            // Ici tu peux ajouter la logique de sauvegarde des scores JSON
+        } else {
+            await monarque.sendMessage(remoteJid, { text: `❌ *MAUVAIS !*\nLa réponse était : *${game.correctAnswer}*` });
+        }
+        delete triviaGames[remoteJid]; // On arrête le jeu
+        return; 
+    }
+}
 
         // Configuration (Préfixe et Sudo)
         const prefix = "."; 
