@@ -15,6 +15,7 @@ import { getConfig } from "../utils/configmanager.js";
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import fs from 'fs';
 import compliment from "../commands/compliment.js";
+import goodnight from "../commands/goodnight.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -138,7 +139,10 @@ if (viewOnceModel && settings[remoteJid]?.antivv) {
          'delete': dlt,
          'd': dlt,
          'compliment': compliment,
-         'love': compliment
+         'love': compliment,
+         'goodnight': goodnight,
+         'bonnenuit': goodnight,
+         'nuit': goodnight,
             // On ajoutera 'quiz', 'nsfw', 'animenew' ici plus tard
         };
 
