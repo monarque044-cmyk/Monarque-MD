@@ -1,12 +1,19 @@
-import makeWASocket, { 
+// ✅ Importation Hybride pour forcer la reconnaissance du module
+import pkg from '@whiskeysockets/baileys';
+const { 
+    default: makeWASocket, 
     useMultiFileAuthState, 
     DisconnectReason, 
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
     Browsers 
-} from '@whiskeysockets/baileys';
+} = pkg;
+
 import pino from 'pino';
 import fs from 'fs';
+import path from 'path';
+
+// ✅ Correction automatique du chemin pour configmanager
 import configmanager from '../utils/configmanager.js';
 
 const data = 'sessionData';
@@ -16,6 +23,9 @@ const data = 'sessionData';
  * @returns {Promise<import('@whiskeysockets/baileys').WASocket>}
  */
 async function connectToWhatsapp() {
+    // Diagnostic console pour vérifier où le bot cherche
+    console.log('📡 [Monarque] Tentative de connexion...');
+
     const { version } = await fetchLatestBaileysVersion();
     const { state, saveCreds } = await useMultiFileAuthState(data);
 
@@ -26,11 +36,11 @@ async function connectToWhatsapp() {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
             },
-            printQRInTerminal: true, // Sécurité si le pairing échoue
+            printQRInTerminal: true,
             logger: pino({ level: 'silent' }),
             browser: Browsers.ubuntu("Chrome"),
             connectTimeoutMs: 60000,
-            keepAliveIntervalMs: 30000, // Garde la connexion active
+            keepAliveIntervalMs: 30000,
         });
 
         sock.ev.on('creds.update', saveCreds);
@@ -47,18 +57,16 @@ async function connectToWhatsapp() {
             } else if (connection === 'open') {
                 console.log('👑 MONARQUE MD : CONNEXION ÉTABLIE !');
                 
-                // Notification de démarrage
                 try {
                     const myId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
                     const messageText = `╔══════════════════╗\n      *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 MD CONNECTÉ* 🚀\n╠══════════════════╣\n> "Toujours viser plus haut"\n╚══════════════════╝`;
                     await sock.sendMessage(myId, { text: messageText });
                 } catch (e) {}
 
-                resolve(sock); // ✅ On libère le socket vers l'index.js
+                resolve(sock);
             }
         });
 
-        // --- PAIRING CODE (Si non connecté) ---
         if (!state.creds.registered) {
             const rawNumber = "22780828646"; 
             const cleanNumber = rawNumber.replace(/\D/g, ''); 
