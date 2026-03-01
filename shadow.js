@@ -4,74 +4,52 @@ const {
     useMultiFileAuthState, 
     DisconnectReason, 
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
     Browsers 
 } = pkg;
-
 import pino from 'pino';
-import fs from 'fs';
-import configmanager from './utils/configmanager.js'; // ✅ Chemin corrigé (./ au lieu de ../)
-
-const data = 'sessionData';
 
 async function connectToWhatsapp() {
-    console.log('📡 [Monarque] Tentative de connexion...');
-
+    // Gestion de l'état de connexion (session)
+    const { state, saveCreds } = await useMultiFileAuthState('session_monarque');
     const { version } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(data);
 
-    return new Promise(async (resolve) => {
-        const sock = makeWASocket({
-            version,
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
-            },
-            printQRInTerminal: true,
-            logger: pino({ level: 'silent' }),
-            browser: Browsers.ubuntu("Chrome"),
-            connectTimeoutMs: 60000,
-            keepAliveIntervalMs: 30000,
-        });
+    const sock = makeWASocket({
+        version,
+        logger: pino({ level: 'silent' }),
+        auth: state,
+        printQRInTerminal: false, // On force le Pairing Code
+        browser: Browsers.ubuntu("Chrome"),
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 0,
+        keepAliveIntervalMs: 10000
+    });
 
-        sock.ev.on('creds.update', saveCreds);
+    // Demande du Pairing Code si non connecté
+    if (!sock.authState.creds.registered) {
+        const phoneNumber = "22780828646"; // Ton numéro
+        setTimeout(async () => {
+            let code = await sock.requestPairingCode(phoneNumber);
+            code = code?.match(/.{1,4}/g)?.join("-") || code;
+            console.log(`\n👑 MONARQUE MD 👑\n📲 CODE DE JUMELAGE : ${code}\n`);
+        }, 3000);
+    }
 
-        sock.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect } = update;
+    // Sauvegarde des identifiants
+    sock.ev.on('creds.update', saveCreds);
 
-            if (connection === 'close') {
-                const statusCode = lastDisconnect?.error?.output?.statusCode;
-                if (statusCode !== DisconnectReason.loggedOut) {
-                    console.log('🔄 Reconnexion Monarque...');
-                    setTimeout(() => connectToWhatsapp().then(resolve), 5000);
-                }
-            } else if (connection === 'open') {
-                console.log('👑 MONARQUE MD : CONNEXION ÉTABLIE !');
-                
-                try {
-                    const myId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-                    const messageText = `╔══════════════════╗\n      *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 MD CONNECTÉ* 🚀\n╠══════════════════╣\n> "Toujours viser plus haut"\n╚══════════════════╝`;
-                    await sock.sendMessage(myId, { text: messageText });
-                } catch (e) {}
-
-                resolve(sock);
-            }
-        });
-
-        if (!state.creds.registered) {
-            const rawNumber = "22780828646"; 
-            const cleanNumber = rawNumber.replace(/\D/g, ''); 
-
-            setTimeout(async () => {
-                try {
-                    let code = await sock.requestPairingCode(cleanNumber);
-                    code = code?.match(/.{1,4}/g)?.join("-") || code;
-                    console.log(`\n📲 TON CODE DE JUMELAGE : ${code}\n`);
-                } catch (e) { console.error('❌ Erreur Pairing:', e); }
-            }, 5000);
+    // Gestion des mises à jour de connexion
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('🔄 Connexion perdue. Reconnexion en cours...', shouldReconnect);
+            if (shouldReconnect) connectToWhatsapp();
+        } else if (connection === 'open') {
+            console.log('✅ MONARQUE MD : CONNEXION ÉTABLIE !');
         }
     });
+
+    return sock;
 }
 
 export default connectToWhatsapp;
-                        
