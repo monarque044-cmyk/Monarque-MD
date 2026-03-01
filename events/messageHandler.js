@@ -6,6 +6,8 @@ import { addXp } from "../utils/levels.js";
 import rank from "../commands/rank.js";
  import anime from "../commands/anime.js";
 import nsfw from "../commands/nsfw.js";
+import tiktok from "../commands/tiktok.js";
+import play from "../commands/play.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -75,6 +77,8 @@ if (userChoice === game.correctIndex) {
             'rank': rank,
             'anime': anime,
             'nsfw': nsfw,
+            'tiktok': tiktok,
+            'play': play,
             // On ajoutera 'quiz', 'nsfw', 'animenew' ici plus tard
         };
 
