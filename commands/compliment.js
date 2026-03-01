@@ -1,44 +1,55 @@
-export default async function compliment(client, message) {
-    const replies = [
-        'Tu es incroyable ! 😊',
-        'Tu es super ! 👍',
-        'Tu es vraiment génial ! 🎉',
-        'Tu es une personne exceptionnelle ! 💕',
-        'Tu es incroyable tel que tu es ! ❤️',
-        "Tu as un sens de l'humour génial ! 😅", 
-        'Tu es incroyablement attentionné et gentil.',
-        'Tu es plus puissant que tu ne le crois.',
-        'Tu illumines la pièce ! 🌞',
-        'Tu es un vrai ami ! 🫂',
-        'Tu m\'inspires ! 🙂‍↔️', 
-        'Tu es intelligent comme le roi noir Léonidas.',
-        'Tu avez un cœur en or ! ☺️',
-        'Tu fais une différence dans le monde 🥰',
-        'Ta positivité est contagieuse ! 🫠',
-        'Tu as une éthique de travail incroyable 😊',
-        'Tu fais ressortir le meilleur chez les autres.😊',
-        'Ton sourire illumine la journée de tout le monde.🌞',
-        'Tu es doué dans tout ce que tu fais.😌',
-        'Ta gentillesse rend le monde meilleur.🥹',
-        'Tu as une perspective unique et merveilleuse.☺️',
-        'Ton enthousiasme est vraiment inspirant !☺️',
-        'Tu es capable d’accomplir de grandes choses.🙂‍↔️',
-        'Tu sais toujours comment rendre quelqu’un spécial.☺️',
-        'Ta confiance est admirable.🙂‍↔️',
-        'Tu as une belle âme.🥹',
-        'Ta générosité n’a pas de limites.🫠',
-        'Tu as un œil exceptionnel pour les détails.🫠',
-        'Ta passion est vraiment motivante ! 😌',
-        'Tu es un(e) auditeur(trice) exceptionnel(le).',
-        'Tu es plus fort(e) que tu ne le penses !',
-        'Ton rire est contagieux.😀',
-        'Tu as un don naturel pour valoriser les autres.✨',
-        'Tu rends le monde meilleur simplement en étant là.✨'
-    ];
+/**
+ * ❤️ COMMANDE COMPLIMENT - MONARQUE MD
+ * Envoie des douceurs et du romantisme
+ */
 
-    const randomReply = replies[Math.floor(Math.random() * replies.length)];
+const compliments = [
+    "Tu es le soleil qui illumine mes journées les plus sombres. ☀️💖",
+    "Ton sourire est la plus belle mélodie que mes yeux aient jamais entendue. 🎶✨",
+    "Le monde est bien plus beau depuis que tu en fais partie. 🌎🌹",
+    "Tu as ce don rare de rendre chaque moment spécial juste par ta présence. ✨💎",
+    "Si la beauté était un crime, tu serais en prison à perpétuité. ⚖️😍",
+    "Ton intelligence n'a d'égale que ta gentillesse. 🧠❤️",
+    "Tu es comme une étoile : même de loin, tu brilles dans mon cœur. ⭐💘",
+    "Il y a des gens qui sont des poèmes, et toi, tu es tout un recueil. 📖🌷",
+    "Rien qu'en pensant à toi, mon cœur se met à danser. 💃💓",
+    "Tu es la preuve vivante que la perfection existe. 👑💫",
+    "Ton rire est mon médicament préféré contre la tristesse. 💊😊",
+    "À tes côtés, le temps s'arrête et tout devient magique. ⏳🪄"
+];
 
-    await client.sendMessage(message.key.remoteJid, {
-        text: randomReply
-    });
-}
+const compliment = async (monarque, m, args) => {
+    try {
+        const chatId = m.key.remoteJid;
+        const pushName = m.pushName || "Utilisateur";
+        
+        // Sélection aléatoire
+        const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
+
+        // Réaction douce
+        await monarque.sendMessage(chatId, { react: { text: "❤️", key: m.key } });
+
+        let message = `🌹 *𝔻𝕠𝕦𝕔𝕖𝕦𝕣 𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖* 🌹\n\n`;
+        message += `✨ *${pushName}*, ${randomCompliment}\n\n`;
+        message += `> Always Dare to dream big\n`;
+        message += `*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
+
+        await monarque.sendMessage(chatId, { 
+            text: message,
+            contextInfo: {
+                externalAdReply: {
+                    title: "𝕊𝕡é𝕔𝕚𝕒𝕝𝕖𝕞𝕖𝕟𝕥 𝕡𝕠𝕦𝕣 𝕥𝕠𝕚...",
+                    body: "Un peu de douceur dans ce monde",
+                    mediaType: 1,
+                    thumbnailUrl: "https://telegra.ph", // Optionnel : une image romantique
+                    sourceUrl: "" 
+                }
+            }
+        }, { quoted: m });
+
+    } catch (err) {
+        console.error("Erreur Compliment :", err);
+    }
+};
+
+export default compliment;
