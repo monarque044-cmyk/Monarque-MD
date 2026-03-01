@@ -1,71 +1,69 @@
 import axios from 'axios';
-import stylizedChar from '../utils/fancy.js';
 
-// ✅ Export direct de la fonction
+/**
+ * 🌤️ COMMANDE MÉTÉO - MONARQUE MD
+ * Utilise ta clé API OpenWeatherMap
+ */
+
+const API_KEY = "1007fa5c50135370a3f6cb0e751831c7"; 
+
 const weather = async (monarque, m, args) => {
-    const chatId = m.key.remoteJid;
-    const city = Array.isArray(args) ? args.join(' ') : args;
-
-    if (!city) {
-        return await monarque.sendMessage(chatId, { 
-            text: '❌ *Usage :* .weather <ville>\n_Exemple: .weather Niamey_' 
-        }, { quoted: m });
-    }
-
     try {
-        const apiKey = '1007fa5c50135370a3f6cb0e751831c7'; 
-        
-        // ✅ URLs API CORRIGÉES
-        const currentUrl = `https://api.openweathermap.org{encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=fr`;
-        const forecastUrl = `https://api.openweathermap.org{encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=fr`;
+        const chatId = m.key.remoteJid;
+        const city = args.join(" ");
 
-        const currentRes = await axios.get(currentUrl);
-        const w = currentRes.data;
-
-        const forecastRes = await axios.get(forecastUrl);
-        const f = forecastRes.data.list;
-
-        // Calcul de l'heure locale
-        const localTime = new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (w.timezone * 1000));
-        const formatTime = localTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-        // Extraction des prévisions (3 jours)
-        let forecastTxt = `\n\n📅 *PRÉVISIONS 3 JOURS :*`;
-        for (let i = 8; i <= 24; i += 8) { 
-            if (!f[i]) break;
-            const day = f[i];
-            const date = new Date(day.dt * 1000).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
-            forecastTxt += `\n• *${date} :* ${Math.round(day.main.temp)}°C | ${day.weather[0].description}`;
+        if (!city) {
+            return await monarque.sendMessage(chatId, { text: "⚠️ Précise une ville !\nEx: `.weather Niamey` ou `.weather Paris`" });
         }
 
-        const weatherText = `
-🌍 *MÉTÉO : ${w.name.toUpperCase()}* (${w.sys.country})
-⏰ *Heure locale :* ${formatTime}
+        // Réaction de recherche
+        await monarque.sendMessage(chatId, { react: { text: "☁️", key: m.key } });
 
-🌡️ *Température :* ${w.main.temp}°C
-☁️ *Conditions :* ${w.weather[0].description}
-💧 *Humidité :* ${w.main.humidity}%
-💨 *Vent :* ${w.wind.speed} m/s
-${forecastTxt}
+        const url = `https://api.openweathermap.org{encodeURIComponent(city)}&units=metric&lang=fr&appid=${API_KEY}`;
+        
+        const res = await axios.get(url, { timeout: 10000 });
+        const data = res.data;
 
-> _Propulsé par Monarque-MD_`.trim();
+        // Traduction des types de météo en Emojis
+        const icons = {
+            "Clear": "☀️", "Clouds": "☁️", "Rain": "🌧️", "Drizzle": "🌦️",
+            "Thunderstorm": "⛈️", "Snow": "❄️", "Mist": "🌫️", "Smoke": "💨", "Haze": "🌫️"
+        };
+        const emoji = icons[data.weather[0].main] || "🌍";
 
-        // ✅ URL ICONE CORRIGÉE
-        const iconUrl = `https://openweathermap.org{w.weather[0].icon}@4x.png`;
+        let message = `🌤️ *𝕄é𝕥é𝕠 𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 : ${data.name}* (${data.sys.country})\n\n`;
+        message += `${emoji} *Ciel* : ${data.weather[0].description}\n`;
+        message += `🌡️ *Température* : ${Math.round(data.main.temp)}°C\n`;
+        message += `🌡️ *Ressenti* : ${Math.round(data.main.feels_like)}°C\n`;
+        message += `💧 *Humidité* : ${data.main.humidity}%\n`;
+        message += `💨 *Vent* : ${Math.round(data.wind.speed * 3.6)} km/h\n\n`;
+        message += `> Always Dare to dream big\n*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
 
         await monarque.sendMessage(chatId, { 
-            image: { url: iconUrl }, 
-            caption: weatherText 
+            text: message,
+            contextInfo: {
+                externalAdReply: {
+                    title: `Météo actuelle : ${data.name}`,
+                    body: `Ciel : ${data.weather[0].description}`,
+                    mediaType: 1,
+                    thumbnailUrl: `https://openweathermap.org{data.weather[0].icon}@2x.png`,
+                    sourceUrl: "" 
+                }
+            }
         }, { quoted: m });
 
+        await monarque.sendMessage(chatId, { react: { text: "✅", key: m.key } });
+
     } catch (err) {
-        console.error('❌ Erreur Weather:', err.message);
-        const errorMsg = err.response?.status === 404 
-            ? `❌ La ville "${city}" est introuvable. Vérifie l'orthographe !` 
-            : `❌ Service météo indisponible ou erreur de clé API.`;
+        console.error("[WEATHER ERROR]:", err.message);
+        const chatId = m.key.remoteJid;
         
-        await monarque.sendMessage(chatId, { text: errorMsg }, { quoted: m });
+        let errorMsg = "❌ Ville introuvable ou service saturé.";
+        if (err.response?.status === 401) errorMsg = "❌ Erreur de clé API. Vérifie ta config.";
+        
+        await monarque.sendMessage(chatId, { text: errorMsg });
     }
 };
 
 export default weather;
+                                   
