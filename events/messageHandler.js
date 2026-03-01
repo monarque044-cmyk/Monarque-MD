@@ -13,6 +13,7 @@ import take from "../commands/take.js";
 import dlt from "../commands/delete.js";
 import { getConfig } from "../utils/configmanager.js";
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
+import fs from 'fs';
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
