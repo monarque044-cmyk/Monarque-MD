@@ -16,6 +16,7 @@ import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import fs from 'fs';
 import compliment from "../commands/compliment.js";
 import goodnight from "../commands/goodnight.js";
+import weather from "../commands/weather.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -143,6 +144,9 @@ if (viewOnceModel && settings[remoteJid]?.antivv) {
          'goodnight': goodnight,
          'bonnenuit': goodnight,
          'nuit': goodnight,
+         'weather': weather,
+    'meteo': weather,
+    'temps': weather,
             // On ajoutera 'quiz', 'nsfw', 'animenew' ici plus tard
         };
 
