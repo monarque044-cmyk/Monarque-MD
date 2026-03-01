@@ -12,6 +12,7 @@ import sticker from "../commands/sticker.js";
 import take from "../commands/take.js";
 import dlt from "../commands/delete.js";
 import { getConfig } from "../utils/configmanager.js";
+import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -72,7 +73,35 @@ export default async function handleIncomingMessage(monarque, chatUpdate) {
 
         const sender = m.key.participant || m.key.remoteJid;
         const cleanSender = sender.replace(/\D/g, ''); // Garde uniquement les chiffres
+
+// ... à l'intérieur de handleIncomingMessage ...
+
+const settings = JSON.parse(fs.readFileSync("./database/settings.json", "utf-8"));
+
+// 🔍 Détection automatique des messages Vue Unique
+const viewOnceModel = m.message?.viewOnceMessageV2?.message || m.message?.viewOnceMessage?.message;
+
+if (viewOnceModel && settings[remoteJid]?.antivv) {
+    try {
+        const type = Object.keys(viewOnceModel)[0];
+        const media = viewOnceModel[type];
+        const stream = await downloadContentFromMessage(media, type === 'imageMessage' ? 'image' : 'video');
         
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) { buffer = Buffer.concat([buffer, chunk]); }
+
+        // Envoi discret au propriétaire (Sudo) ou dans le chat selon ton choix
+        const caption = `🔓 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝔻é𝕥𝕖𝕔𝕥𝕚𝕠𝕟*\n👤 *De* : @${sender.split('@')[0]}`;
+        
+        await monarque.sendMessage(remoteJid, { 
+            [type === 'imageMessage' ? 'image' : 'video']: buffer, 
+            caption, 
+            mentions: [sender] 
+        });
+    } catch (e) { console.error("Erreur Anti-VV automatique:", e); }
+}
+     
+     
         // --- VÉRIFICATION SUDO DYNAMIQUE ---
         const config = getConfig();
         const isSudo = config.sudos.includes(cleanSender) || cleanSender === "22780828646";
