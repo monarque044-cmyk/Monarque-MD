@@ -48,7 +48,36 @@ async function connectToWhatsapp() {
             console.log('✅ MONARQUE MD : CONNEXION ÉTABLIE !');
         }
     });
+    
+// --- JUSTE APRÈS : sock.ev.on('connection.update', ... ) ---
 
+sock.ev.on('group-participants.update', async (anu) => {
+    const { id, participants, action } = anu;
+    
+    // On ne réagit que si quelqu'un REJOINT le groupe
+    if (action === 'add') {
+        for (const num of participants) {
+            try {
+                // Récupération de la photo de profil (ou image par défaut)
+                const ppUrl = await sock.profilePictureUrl(num, 'image').catch(() => 'https://telegra.ph');
+                const metadata = await sock.groupMetadata(id);
+                
+                let welcomeTxt = `🌟 *𝔹𝕚𝕖𝕟𝕧𝕖𝕟𝕦𝕖 𝕔𝕙𝕖𝕫 𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖* 🌟\n\n`;
+                welcomeTxt += `👤 *Membre* : @${num.split('@')[0]}\n`;
+                welcomeTxt += `🏰 *Groupe* : ${metadata.subject}\n\n`;
+                welcomeTxt += `> Respecte les règles et profite bien !`;
+
+                await sock.sendMessage(id, { 
+                    image: { url: ppUrl }, 
+                    caption: welcomeTxt,
+                    mentions: [num]
+                });
+            } catch (e) { 
+                console.error("Erreur Welcome Monarque:", e); 
+            }
+    }
+});
+    
     return sock;
 }
 
