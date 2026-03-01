@@ -3,7 +3,7 @@ import configmanager from "../utils/configmanager.js";
 import menu from "../commands/menu.js";
 import quiz, { triviaGames } from "../commands/quiz.js";
 import { addXp } from "../utils/levels.js";
-import rank from "../commands/rank.js*;
+import rank from "../commands/rank.js";
     
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
