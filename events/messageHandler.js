@@ -2,6 +2,7 @@ import configmanager from "../utils/configmanager.js";
 // On importera nos commandes ici au fur et à mesure
 import menu from "../commands/menu.js";
 import quiz, { triviaGames } from "../commands/quiz.js";
+import { addXp } from "../utils/levels.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -36,6 +37,20 @@ if (triviaGames[remoteJid]) {
         }
         delete triviaGames[remoteJid]; // On arrête le jeu
         return; 
+
+// ... (dans le bloc triviaGames[remoteJid]) ...
+if (userChoice === game.correctIndex) {
+    const { level, leveledUp } = addXp(sender, 50); // +50 XP par bonne réponse
+    
+    let winMsg = `✅ *BRAVO @${sender.split('@')[0]} !*\n`;
+    winMsg += `🌟 +50 XP | Total Niveau : *${level}*\n`;
+    
+    if (leveledUp) {
+        winMsg += `\n🎊 *LEVEL UP !* Tu es maintenant niveau *${level}* !`;
+    }
+    
+    await monarque.sendMessage(remoteJid, { text: winMsg, mentions: [sender] });
+}
     }
 }
 
