@@ -3,7 +3,8 @@ import configmanager from "../utils/configmanager.js";
 import menu from "../commands/menu.js";
 import quiz, { triviaGames } from "../commands/quiz.js";
 import { addXp } from "../utils/levels.js";
-
+import rank from "../commands/rank.js*;
+    
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
         const m = chatUpdate.messages[0];
@@ -69,6 +70,7 @@ if (userChoice === game.correctIndex) {
         const commands = {
             'menu': menu,
             'help': menu,
+            'rank': rank
             // On ajoutera 'quiz', 'nsfw', 'animenew' ici plus tard
         };
 
