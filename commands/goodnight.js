@@ -1,56 +1,62 @@
-function beautifyGoodnight(text) {
-    const emojis = ['🌙', '💤', '🌃', '✨', '🌟', '🛌', '😴', '🌌', '🌠'];
-    const selected = emojis.sort(() => 0.5 - Math.random()).slice(0, 3);
-    const lineEmoji = selected.join(' ');
+/**
+ * 🌙 COMMANDE GOODNIGHT - MONARQUE MD
+ * Souhaite une douce nuit avec style
+ */
 
-    return `✨ ${text}\n\n` +
-           `${lineEmoji} Que tes rêves soient doux,\n` +
-           `${lineEmoji} Que la nuit t’apporte la paix,\n` +
-           `${lineEmoji} Et que demain soit encore meilleur.`;
-}
+const wishes = [
+    "Que les étoiles veillent sur tes rêves cette nuit. ✨🛌",
+    "Ferme les yeux, oublie tes soucis et laisse la lune te bercer. 🌙💤",
+    "Une douce nuit t'attend, repose-toi bien pour briller demain. 🌟👑",
+    "Que ton sommeil soit aussi paisible qu'une mer calme. 🌊🌙",
+    "Je t'envoie un nuage de tendresse pour accompagner ta nuit. ☁️💖",
+    "Dors bien, demain est une nouvelle chance de réaliser tes rêves. 🚀✨",
+    "Que les anges murmurent des poèmes à ton oreille pendant ton sommeil. 👼🎶",
+    "Repose-toi bien, le monde a besoin de ta lumière demain matin. ☀️💤"
+];
 
-export default async function goodnight(client, message) {
+const goodnight = async (monarque, m, args) => {
     try {
-        // 1. Identification du chat (Indispensable pour répondre)
-        const chatId = message.chat || message.key?.remoteJid;
-        if (!chatId) return console.log("⚠️ Chat ID introuvable");
-
-        // 2. Récupération propre du texte
-        const msgText = message.body || 
-                        message.message?.conversation || 
-                        message.message?.extendedTextMessage?.text || 
-                        "";
+        const chatId = m.key.remoteJid;
+        const pushName = m.pushName || "Utilisateur";
         
-        const args = msgText.split(' ').slice(1);
+        // Détection de la cible (Mention ou Réponse)
+        const quoted = m.message?.extendedTextMessage?.contextInfo?.participant;
+        const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        const target = mentioned || quoted || null;
+        
+        const randomWish = wishes[Math.floor(Math.random() * wishes.length)];
+        
+        // Réaction nocturne
+        await monarque.sendMessage(chatId, { react: { text: "😴", key: m.key } });
 
-        // 3. Identification de la cible (Sécurité Anti-Crash)
-        const contextInfo = message.message?.extendedTextMessage?.contextInfo;
-        let targetUser = message.sender || message.key?.participant || chatId;
-
-        // Si mention, on prend le premier JID du tableau
-        if (contextInfo?.mentionedJid && contextInfo.mentionedJid.length > 0) {
-            targetUser = contextInfo.mentionedJid[0];
-        } else if (contextInfo?.participant) {
-            targetUser = contextInfo.participant;
+        let message = `🌙 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 ℕ𝕦𝕚𝕥 𝔻𝕠𝕦𝕔𝕖* 🌙\n\n`;
+        
+        if (target) {
+            message += `✨ *Douce nuit* @${target.split('@')[0]}, ${randomWish}\n\n`;
+            message += `_Souhaité avec soin par ${pushName}_ 🕊️`;
+        } else {
+            message += `✨ *Bonne nuit ${pushName}*, ${randomWish}\n\n`;
         }
 
-        // 4. Préparation du texte
-        const customText = args.join(' ');
-        const messageFinal = customText || 'Passe une excellente nuit !';
-        const beautified = beautifyGoodnight(messageFinal);
+        message += `\n\n> Always Dare to dream big\n*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
 
-        // 5. Nettoyage du JID pour l'affichage (@123456789)
-        // On vérifie que targetUser est bien une string avant split
-        const formattedName = (typeof targetUser === 'string') ? targetUser.split('@')[0] : 'toi';
+        await monarque.sendMessage(chatId, { 
+            text: message,
+            mentions: target ? [target] : [],
+            contextInfo: {
+                externalAdReply: {
+                    title: "✨ Fais de beaux rêves...",
+                    body: "Le repos du guerrier Monarque",
+                    mediaType: 1,
+                    thumbnailUrl: "https://telegra.ph", 
+                    sourceUrl: "" 
+                }
+            }
+        }, { quoted: m });
 
-        // 6. Envoi
-        await client.sendMessage(chatId, {
-            text: `💤 *Bonne nuit* @${formattedName} 🌙\n\n${beautified}`,
-            mentions: [targetUser]
-        }, { quoted: message });
-
-    } catch (error) {
-        // Affiche l'erreur précise sans arrêter le bot
-        console.error('❌ Erreur capturée dans Goodnight :', error.message);
+    } catch (err) {
+        console.error("Erreur Goodnight :", err);
     }
-}
+};
+
+export default goodnight;
