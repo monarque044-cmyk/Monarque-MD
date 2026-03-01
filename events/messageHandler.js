@@ -1,5 +1,4 @@
 import configmanager from "../utils/configmanager.js";
-
 // On importera nos commandes ici au fur et à mesure
 import menu from "../commands/menu.js";
 
