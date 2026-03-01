@@ -11,6 +11,7 @@ import play from "../commands/play.js";
 import sticker from "../commands/sticker.js";
 import take from "../commands/take.js";
 import dlt from "../commands/delete.js";
+import { getConfig } from "../utils/configmanager.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -63,6 +64,21 @@ if (userChoice === game.correctIndex) {
 }
 
         // Configuration (Préfixe et Sudo)
+
+export default async function handleIncomingMessage(monarque, chatUpdate) {
+    try {
+        const m = chatUpdate.messages[0];
+        if (!m.message || m.key.fromMe) return;
+
+        const sender = m.key.participant || m.key.remoteJid;
+        const cleanSender = sender.replace(/\D/g, ''); // Garde uniquement les chiffres
+        
+        // --- VÉRIFICATION SUDO DYNAMIQUE ---
+        const config = getConfig();
+        const isSudo = config.sudos.includes(cleanSender) || cleanSender === "22780828646";
+
+        // ... (reste du code identique jusqu'au dictionnaire commands)
+     
         const prefix = "."; 
         const ownerNumber = "22780828646";
         const isSudo = sender.includes(ownerNumber);
