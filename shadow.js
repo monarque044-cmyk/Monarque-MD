@@ -1,4 +1,3 @@
-// ✅ Importation Hybride pour forcer la reconnaissance du module
 import pkg from '@whiskeysockets/baileys';
 const { 
     default: makeWASocket, 
@@ -11,19 +10,11 @@ const {
 
 import pino from 'pino';
 import fs from 'fs';
-import path from 'path';
-
-// ✅ Correction automatique du chemin pour configmanager
-import configmanager from '../utils/configmanager.js';
+import configmanager from './utils/configmanager.js'; // ✅ Chemin corrigé (./ au lieu de ../)
 
 const data = 'sessionData';
 
-/**
- * ✅ Connexion Pure Monarque
- * @returns {Promise<import('@whiskeysockets/baileys').WASocket>}
- */
 async function connectToWhatsapp() {
-    // Diagnostic console pour vérifier où le bot cherche
     console.log('📡 [Monarque] Tentative de connexion...');
 
     const { version } = await fetchLatestBaileysVersion();
@@ -83,3 +74,4 @@ async function connectToWhatsapp() {
 }
 
 export default connectToWhatsapp;
+                        
