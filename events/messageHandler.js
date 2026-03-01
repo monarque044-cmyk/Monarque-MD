@@ -8,6 +8,9 @@ import rank from "../commands/rank.js";
 import nsfw from "../commands/nsfw.js";
 import tiktok from "../commands/tiktok.js";
 import play from "../commands/play.js";
+import sticker from "../commands/sticker.js";
+import take from "../commands/take.js";
+import dlt from "../commands/delete.js";
 
 export default async function handleIncomingMessage(monarque, chatUpdate) {
     try {
@@ -79,6 +82,14 @@ if (userChoice === game.correctIndex) {
             'nsfw': nsfw,
             'tiktok': tiktok,
             'play': play,
+         'tt' : tiktok,
+         's': sticker,
+         'sticker': sticker,
+     'music': play,
+     'wm': take,
+        'dl': dlt,
+         'delete': dlt,
+         'd': dlt,
             // On ajoutera 'quiz', 'nsfw', 'animenew' ici plus tard
         };
 
