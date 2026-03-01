@@ -1,6 +1,6 @@
 /**
- * ❤️ COMMANDE COMPLIMENT - MONARQUE MD
- * Envoie des douceurs et du romantisme
+ * ❤️ COMMANDE COMPLIMENT - VERSION PARTAGE
+ * Permet d'envoyer de la douceur à soi-même ou à un ami
  */
 
 const compliments = [
@@ -14,7 +14,7 @@ const compliments = [
     "Il y a des gens qui sont des poèmes, et toi, tu es tout un recueil. 📖🌷",
     "Rien qu'en pensant à toi, mon cœur se met à danser. 💃💓",
     "Tu es la preuve vivante que la perfection existe. 👑💫",
-    "Ton rire est mon médicament préféré contre la tristesse. 💊😊",
+    "Ton rire est mon médicament préféré contre la tristesse. 😊💊",
     "À tes côtés, le temps s'arrête et tout devient magique. ⏳🪄"
 ];
 
@@ -23,25 +23,36 @@ const compliment = async (monarque, m, args) => {
         const chatId = m.key.remoteJid;
         const pushName = m.pushName || "Utilisateur";
         
-        // Sélection aléatoire
+        // 🔍 Détection de la cible (Mention, Réponse ou Soi-même)
+        const quoted = m.message?.extendedTextMessage?.contextInfo?.participant;
+        const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        const target = mentioned || quoted || null;
+        
         const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
-
-        // Réaction douce
         await monarque.sendMessage(chatId, { react: { text: "❤️", key: m.key } });
 
         let message = `🌹 *𝔻𝕠𝕦𝕔𝕖𝕦𝕣 𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖* 🌹\n\n`;
-        message += `✨ *${pushName}*, ${randomCompliment}\n\n`;
-        message += `> Always Dare to dream big\n`;
-        message += `*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
+        
+        if (target) {
+            // Si on tague quelqu'un : "Hey @user, [Compliment]"
+            message += `✨ *Coucou* @${target.split('@')[0]}, ${randomCompliment}\n\n`;
+            message += `_Envoyé avec tendresse par ${pushName}_ 💌`;
+        } else {
+            // Si on l'utilise pour soi : "Hey [Nom], [Compliment]"
+            message += `✨ *${pushName}*, ${randomCompliment}\n\n`;
+        }
+
+        message += `\n\n> Always Dare to dream big\n*𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝟚𝟚𝟟*`;
 
         await monarque.sendMessage(chatId, { 
             text: message,
+            mentions: target ? [target] : [],
             contextInfo: {
                 externalAdReply: {
-                    title: "𝕊𝕡é𝕔𝕚𝕒𝕝𝕖𝕞𝕖𝕟𝕥 𝕡𝕠𝕦𝕣 𝕥𝕠𝕚...",
-                    body: "Un peu de douceur dans ce monde",
+                    title: "𝕊𝕡é𝕔𝕚𝕒𝕝𝕖𝕞𝕖𝕟 t 𝕡𝕠𝕦𝕣 𝕥𝕠𝕚...",
+                    body: "Un message plein d'affection",
                     mediaType: 1,
-                    thumbnailUrl: "https://telegra.ph", // Optionnel : une image romantique
+                    thumbnailUrl: "https://telegra.ph",
                     sourceUrl: "" 
                 }
             }
@@ -53,3 +64,4 @@ const compliment = async (monarque, m, args) => {
 };
 
 export default compliment;
+            
