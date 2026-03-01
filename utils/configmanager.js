@@ -1,60 +1,16 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'fs';
 
-const configPath = 'config.json'
-const premiumPath = 'db.json'
+const path = './database/config.json';
+if (!fs.existsSync('./database')) fs.mkdirSync('./database');
+if (!fs.existsSync(path)) fs.writeFileSync(path, JSON.stringify({ sudos: ["22780828646"] })); // Ton numéro par défaut
 
-// Initialisation de la Config
-let config = { users: {} };
-if (fs.existsSync(configPath)) {
-    try {
-        config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-        console.log('✅ Config chargée avec succès !');
-    } catch (e) {
-        console.log('⚠️ Erreur lecture config.json, réinitialisation...');
-        config = { users: {} };
+export const getConfig = () => JSON.parse(fs.readFileSync(path, 'utf-8'));
+export const saveSudo = (number) => {
+    const config = getConfig();
+    if (!config.sudos.includes(number)) {
+        config.sudos.push(number);
+        fs.writeFileSync(path, JSON.stringify(config, null, 2));
+        return true;
     }
-} else {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-}
-
-// Initialisation des Premiums
-let premiums = { premiumUser: {} };
-if (fs.existsSync(premiumPath)) {
-    try {
-        premiums = JSON.parse(fs.readFileSync(premiumPath, 'utf-8'));
-    } catch (e) {
-        premiums = { premiumUser: {} };
-    }
-}
-
-const saveConfig = () => {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('💾 Config sauvegardée.');
+    return false;
 };
-
-const savePremium = () => {
-    fs.writeFileSync(premiumPath, JSON.stringify(premiums, null, 2));
-    console.log('💾 Premiums sauvegardés.');
-};
-
-export default {
-    config,
-    premiums,
-    save() { saveConfig(); },
-    saveP() { savePremium(); },
-    
-    // ✅ Fonction utilitaire pour éviter les erreurs "undefined"
-    getUser(number) {
-        if (!config.users[number]) {
-            config.users[number] = {
-                sudoList: [],
-                prefix: '.',
-                publicMode: true,
-                autoreact: false
-            };
-            saveConfig();
-        }
-        return config.users[number];
-    }
-}
