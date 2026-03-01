@@ -1,64 +1,37 @@
-import stylizedChar from "../utils/fancy.js"
-import axios from 'axios'
+import axios from 'axios';
 
-export async function play(message, client) {
-    const remoteJid = message.key.remoteJid
-    const rawText = message.message?.conversation || message.message?.extendedTextMessage?.text || ''
-    const text = rawText.toLowerCase().trim()
+const play = async (monarque, m, args) => {
+    const chatId = m.key.remoteJid;
+    const query = args.join(" ");
+
+    if (!query) return await monarque.sendMessage(chatId, { text: "⚠️ Quelle chanson cherches-tu ?\nEx: `.play Ninho - No Love`" });
 
     try {
-        const query = text.split(/\s+/).slice(1).join(' ')
-        if (!query) {
-            await client.sendMessage(remoteJid, {
-                text: stylizedChar('❌ Fournis un titre de vidéo.')
-            })
-            return
-        }
+        await monarque.sendMessage(chatId, { react: { text: "🎧", key: m.key } });
 
-        console.log('🎯 Recherche :', query)
+        // Utilisation d'une API de recherche et téléchargement (Ex: Y2mate ou alternative 2026)
+        const searchRes = await axios.get(`https://api.vkrdown.com{encodeURIComponent(query)}`);
+        const video = searchRes.data.data[0]; // On prend le premier résultat
 
-        await client.sendMessage(remoteJid, {
-            text: stylizedChar(`🔎 Recherche : ${query}`),
-            quoted: message
-        })
+        if (!video) throw new Error("Aucun résultat");
 
-        const searchUrl = `https://apis.davidcyriltech.my.id/play?query=${encodeURIComponent(query)}`
-        const searchResponse = await axios.get(searchUrl, { timeout: 10000 })
+        const downloadUrl = `https://api.vkrdown.com{video.url}`;
+        const dlRes = await axios.get(downloadUrl);
 
-        if (!searchResponse.data.status || !searchResponse.data.result) {
-            throw new Error('Vidéo non trouvée.')
-        }
-
-        const videoData = searchResponse.data.result
-        const videoUrl = videoData.url || videoData.download_url
-
-        if (!videoUrl) {
-            throw new Error('URL de téléchargement non disponible.')
-        }
-
-        const apiUrl = `https://youtubeabdlpro.abrahamdw882.workers.dev/?url=${encodeURIComponent(videoUrl)}`
-        
-        await client.sendMessage(remoteJid, {
-            image: { url: videoData.thumbnail },
-            caption: `🎵 *${videoData.title}*\n⏱️ ${videoData.duration || 'Inconnu'}\n👁️ ${videoData.views || 'Inconnu'} vues\n\n© Digital Crew 243`,
-            quoted: message
-        })
-
-        await client.sendMessage(remoteJid, {
-            audio: { url: apiUrl },
+        await monarque.sendMessage(chatId, {
+            audio: { url: dlRes.data.data.audio },
             mimetype: 'audio/mp4',
-            ptt: false,
-            quoted: message
-        })
+            ptt: false, // false pour un fichier audio, true pour un vocal
+            caption: `🎵 *𝕄𝕠𝕟𝕒𝕣𝕢𝕦𝕖 𝕄𝕦𝕤𝕚𝕔* : ${video.title}`
+        }, { quoted: m });
 
-        console.log('✅ Audio envoyé :', videoData.title)
+        await monarque.sendMessage(chatId, { react: { text: "🎵", key: m.key } });
 
-    } catch (error) {
-        console.error('❌ Erreur play :', error.message)
-        await client.sendMessage(remoteJid, {
-            text: stylizedChar('❌ Erreur de téléchargement.')
-        })
+    } catch (err) {
+        console.error(err);
+        await monarque.sendMessage(chatId, { text: "❌ Impossible de lire cette musique." });
     }
-}
+};
 
-export default play
+export default play;
+            
